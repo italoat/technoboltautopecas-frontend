@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Mail, Phone, User, Calendar, Star, FileSpreadsheet, Send, MessageCircle, Mic } from 'lucide-react';
+import { Mail, Phone, User, Calendar, Star, FileSpreadsheet, Send, MessageCircle, Mic, Wand2 } from 'lucide-react';
 import api from '../services/api';
 
 export const CRM = () => {
@@ -7,14 +7,18 @@ export const CRM = () => {
   const [clients, setClients] = useState<any[]>([]);
   
   // Estados para Fornecedores
+  const [supplierName, setSupplierName] = useState('');
   const [emailSubject, setEmailSubject] = useState('');
   const [emailBody, setEmailBody] = useState('');
   const [attachmentName, setAttachmentName] = useState('');
+  const [isGeneratingEmail, setIsGeneratingEmail] = useState(false);
   
   // Estados para Whatsapp
   const [selectedClientPhone, setSelectedClientPhone] = useState('');
   const [whatsappMessage, setWhatsappMessage] = useState('');
+  const [whatsappContext, setWhatsappContext] = useState(''); // O que o usuário quer dizer
   const [isRecording, setIsRecording] = useState(false);
+  const [isGeneratingWhats, setIsGeneratingWhats] = useState(false);
 
   useEffect(() => {
     // Busca clientes reais do backend
@@ -26,10 +30,9 @@ export const CRM = () => {
     const file = e.target.files?.[0];
     if (file) {
       setAttachmentName(file.name);
-      // Simulação: Transforma CSV/Excel em Tabela HTML
       const tableMock = `
         <br>
-        <table style="border-collapse: collapse; width: 100%; border: 1px solid #ddd;">
+        <table style="border-collapse: collapse; width: 100%; border: 1px solid #ddd; font-family: sans-serif;">
           <tr style="background-color: #f2f2f2;"><th>Código</th><th>Produto</th><th>Qtd</th></tr>
           <tr><td>102030</td><td>Amortecedor Diant.</td><td>50</td></tr>
           <tr><td>405060</td><td>Pastilha Freio</td><td>100</td></tr>
@@ -40,22 +43,52 @@ export const CRM = () => {
     }
   };
 
+  const generateEmailWithAI = async () => {
+    if (!emailSubject || !supplierName) return alert("Preencha Fornecedor e Assunto primeiro.");
+    setIsGeneratingEmail(true);
+    try {
+      // Simulação de chamada IA (poderia ser o endpoint /api/ai/consult)
+      // Aqui estamos focando na estrutura do frontend pedida
+      const prompt = `Escreva um email formal mas direto para o fornecedor ${supplierName} sobre: ${emailSubject}. Seja breve.`;
+      const res = await api.post('/api/ai/consult', { prompt });
+      setEmailBody(res.data.response + (attachmentName ? "\n\n(Segue planilha em anexo na tabela abaixo)" : ""));
+    } catch (e) {
+      setEmailBody("Olá, gostaria de solicitar uma cotação conforme os itens abaixo.");
+    } finally {
+      setIsGeneratingEmail(false);
+    }
+  };
+
   const sendEmail = () => {
-    alert(`E-mail enviado para o fornecedor!\nAssunto: ${emailSubject}\nAnexo: ${attachmentName}`);
+    alert(`E-mail enviado para ${supplierName}!\nAssunto: ${emailSubject}\nAnexo: ${attachmentName}`);
     setEmailSubject('');
     setEmailBody('');
     setAttachmentName('');
+    setSupplierName('');
   };
 
   // --- LÓGICA DE WHATSAPP ---
   const handleMicClick = () => {
-    // Simula ativação do microfone (Web Speech API seria usada aqui em prod)
     setIsRecording(!isRecording);
     if (!isRecording) {
       setTimeout(() => {
-        setWhatsappMessage(prev => prev + " Olá, gostaria de informar que seu pedido já chegou na loja e está pronto para retirada.");
+        setWhatsappContext("Avisa que a peça do motor chegou e pode buscar.");
         setIsRecording(false);
       }, 2000);
+    }
+  };
+
+  const generateWhatsappWithAI = async () => {
+    if (!whatsappContext) return;
+    setIsGeneratingWhats(true);
+    try {
+      const prompt = `Crie uma mensagem curta de WhatsApp para um cliente de oficina. Contexto: "${whatsappContext}". Use tom amigável, sem termos técnicos difíceis, parecendo um humano falando.`;
+      const res = await api.post('/api/ai/consult', { prompt });
+      setWhatsappMessage(res.data.response.replace(/"/g, ''));
+    } catch (e) {
+      setWhatsappMessage(whatsappContext);
+    } finally {
+      setIsGeneratingWhats(false);
     }
   };
 
@@ -82,15 +115,15 @@ export const CRM = () => {
             Clientes
           </button>
           <button onClick={() => setActiveTab('suppliers')} className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${activeTab === 'suppliers' ? 'bg-pink-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}>
-            Fornecedores (Email)
+            Fornecedores
           </button>
           <button onClick={() => setActiveTab('whatsapp')} className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${activeTab === 'whatsapp' ? 'bg-green-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}>
-            Whatsapp Rápido
+            Whatsapp IA
           </button>
         </div>
       </div>
 
-      {/* --- ABA 1: CLIENTES (Existente) --- */}
+      {/* --- ABA 1: CLIENTES --- */}
       {activeTab === 'clients' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {clients.length === 0 && <p className="text-slate-500 col-span-3 text-center">Nenhum histórico de vendas encontrado.</p>}
@@ -130,7 +163,7 @@ export const CRM = () => {
         </div>
       )}
 
-      {/* --- ABA 2: FORNECEDORES (Email Automático) --- */}
+      {/* --- ABA 2: FORNECEDORES (Email Automático IA) --- */}
       {activeTab === 'suppliers' && (
         <div className="bg-dark-surface p-6 rounded-xl border border-slate-700 max-w-3xl mx-auto">
           <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
@@ -138,43 +171,56 @@ export const CRM = () => {
           </h2>
           
           <div className="space-y-4">
-            <div>
-              <label className="text-xs text-slate-400 uppercase font-bold block mb-1">Fornecedor</label>
-              <select className="w-full bg-dark-bg border border-slate-600 rounded-lg p-3 text-white outline-none focus:border-pink-500">
-                <option>Selecione um fornecedor...</option>
-                <option>Bosch Distribuidora</option>
-                <option>Cofap Oficial</option>
-                <option>Lubrax Center</option>
-              </select>
+            <div className="grid grid-cols-2 gap-4">
+                <div>
+                    <label className="text-xs text-slate-400 uppercase font-bold block mb-1">Fornecedor</label>
+                    <select 
+                        className="w-full bg-dark-bg border border-slate-600 rounded-lg p-3 text-white outline-none focus:border-pink-500"
+                        onChange={(e) => setSupplierName(e.target.value)}
+                        value={supplierName}
+                    >
+                        <option value="">Selecione...</option>
+                        <option value="Bosch Distribuidora">Bosch Distribuidora</option>
+                        <option value="Cofap Oficial">Cofap Oficial</option>
+                        <option value="Lubrax Center">Lubrax Center</option>
+                    </select>
+                </div>
+                <div>
+                    <label className="text-xs text-slate-400 uppercase font-bold block mb-1">Assunto (Resumo)</label>
+                    <input 
+                        type="text" 
+                        className="w-full bg-dark-bg border border-slate-600 rounded-lg p-3 text-white outline-none focus:border-pink-500"
+                        value={emailSubject}
+                        onChange={e => setEmailSubject(e.target.value)}
+                        placeholder="Ex: Pedido Freios"
+                    />
+                </div>
             </div>
 
-            <div>
-              <label className="text-xs text-slate-400 uppercase font-bold block mb-1">Assunto</label>
-              <input 
-                type="text" 
-                className="w-full bg-dark-bg border border-slate-600 rounded-lg p-3 text-white outline-none focus:border-pink-500"
-                value={emailSubject}
-                onChange={e => setEmailSubject(e.target.value)}
-                placeholder="Ex: Cotação de Amortecedores - TechnoBolt"
-              />
-            </div>
-
-            <div>
-              <label className="text-xs text-slate-400 uppercase font-bold block mb-1">Corpo do Email</label>
+            <div className="relative">
+              <label className="text-xs text-slate-400 uppercase font-bold block mb-1 flex justify-between">
+                  Corpo do Email
+                  <button 
+                    onClick={generateEmailWithAI} 
+                    disabled={isGeneratingEmail}
+                    className="text-pink-400 hover:text-white flex items-center gap-1 text-[10px]"
+                  >
+                    <Wand2 size={12}/> {isGeneratingEmail ? 'Escrevendo...' : 'Gerar Texto com IA'}
+                  </button>
+              </label>
               <textarea 
-                className="w-full bg-dark-bg border border-slate-600 rounded-lg p-3 text-white outline-none focus:border-pink-500 h-32"
+                className="w-full bg-dark-bg border border-slate-600 rounded-lg p-3 text-white outline-none focus:border-pink-500 h-40 custom-scrollbar"
                 value={emailBody}
                 onChange={e => setEmailBody(e.target.value)}
-                placeholder="Digite a mensagem aqui..."
+                placeholder="A IA pode escrever isso para você..."
               />
             </div>
 
             {/* Upload Inteligente */}
-            <div className="border-2 border-dashed border-slate-600 rounded-lg p-6 flex flex-col items-center justify-center text-slate-400 hover:bg-slate-800/50 transition-colors cursor-pointer relative">
+            <div className="border-2 border-dashed border-slate-600 rounded-lg p-4 flex flex-col items-center justify-center text-slate-400 hover:bg-slate-800/50 transition-colors cursor-pointer relative">
               <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={handleFileUpload} accept=".csv, .xlsx" />
-              <FileSpreadsheet size={32} className="mb-2 text-green-500" />
-              <p className="text-sm font-medium">{attachmentName || "Arraste uma planilha de pedido aqui"}</p>
-              <p className="text-xs mt-1 opacity-70">O sistema converterá automaticamente em tabela no corpo do email.</p>
+              <FileSpreadsheet size={24} className="mb-2 text-green-500" />
+              <p className="text-sm font-medium">{attachmentName || "Anexar Planilha de Pedido"}</p>
             </div>
 
             <button onClick={sendEmail} className="w-full bg-pink-600 hover:bg-pink-500 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2">
@@ -184,7 +230,7 @@ export const CRM = () => {
         </div>
       )}
 
-      {/* --- ABA 3: WHATSAPP (Ditado) --- */}
+      {/* --- ABA 3: WHATSAPP (Ditado + IA) --- */}
       {activeTab === 'whatsapp' && (
         <div className="bg-dark-surface p-6 rounded-xl border border-slate-700 max-w-2xl mx-auto">
           <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
@@ -199,28 +245,40 @@ export const CRM = () => {
                 onChange={(e) => setSelectedClientPhone(e.target.value)}
               >
                 <option value="">Selecione para quem enviar...</option>
-                {/* Mock de telefones - na real viria do banco */}
                 <option value="11999999999">João da Silva (Oficina X)</option>
                 <option value="11988888888">Maria Oliveira</option>
               </select>
             </div>
 
+            {/* Área de Ditado/Contexto */}
+            <div className="bg-slate-800/50 p-3 rounded-lg border border-slate-700">
+                <label className="text-[10px] text-slate-500 uppercase font-bold mb-2 block flex justify-between">
+                    O que você quer dizer? (Dite ou Escreva)
+                    {isRecording && <span className="text-red-500 animate-pulse flex items-center gap-1"><Mic size={10}/> Gravando...</span>}
+                </label>
+                <div className="flex gap-2">
+                    <input 
+                        type="text" 
+                        className="flex-1 bg-transparent text-white outline-none placeholder:text-slate-600"
+                        placeholder="Ex: Peça chegou, pode buscar..."
+                        value={whatsappContext}
+                        onChange={e => setWhatsappContext(e.target.value)}
+                    />
+                    <button onClick={handleMicClick} className="text-slate-400 hover:text-white"><Mic size={18}/></button>
+                    <button onClick={generateWhatsappWithAI} disabled={isGeneratingWhats} className="bg-bolt-500 text-white px-3 py-1 rounded text-xs font-bold hover:bg-bolt-600 transition-all">
+                        {isGeneratingWhats ? '...' : 'Gerar Msg'}
+                    </button>
+                </div>
+            </div>
+
+            {/* Resultado da IA */}
             <div className="relative">
-              <label className="text-xs text-slate-400 uppercase font-bold block mb-1">Mensagem (Digite ou Dite)</label>
+              <label className="text-xs text-slate-400 uppercase font-bold block mb-1">Mensagem Final (Editável)</label>
               <textarea 
-                className="w-full bg-dark-bg border border-slate-600 rounded-lg p-3 text-white outline-none h-32 pr-12"
+                className="w-full bg-dark-bg border border-slate-600 rounded-lg p-3 text-white outline-none h-24"
                 value={whatsappMessage}
                 onChange={e => setWhatsappMessage(e.target.value)}
-                placeholder="Ex: Olá João, seu pedido de pastilhas chegou..."
               />
-              {/* Botão de Microfone */}
-              <button 
-                onClick={handleMicClick}
-                className={`absolute bottom-3 right-3 p-2 rounded-full transition-all ${isRecording ? 'bg-red-500 animate-pulse text-white' : 'bg-slate-700 text-slate-300 hover:text-white'}`}
-                title="Ditar mensagem"
-              >
-                <Mic size={20} />
-              </button>
             </div>
 
             <button onClick={sendWhatsapp} className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2">
