@@ -1,20 +1,29 @@
-import React from 'react';
-import { AlertTriangle, TrendingUp, Trophy, Package, DollarSign, Clock } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import api from '../services/api'; 
+import { AlertTriangle, TrendingUp, Trophy, Package, Clock } from 'lucide-react';
 
 export const Dashboard = () => {
+  const [status, setStatus] = useState('Conectando...');
+
+  useEffect(() => {
+    api.get('/') // Ajustei para '/' pois é a rota raiz do backend que retorna status
+      .then(res => setStatus(res.data.status || 'Online'))
+      .catch(() => setStatus('Backend Offline'));
+  }, []);
+
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="space-y-8 animate-in fade-in duration-500">
       
       {/* Cabeçalho da Página */}
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-3xl font-bold text-white">Centro de Comando</h2>
-          <p className="text-slate-400">Visão geral operacional - Loja 01 (Matriz)</p>
+          <p className="text-slate-400">TechnoBolt Autopeças - Operacional</p>
         </div>
         <div className="flex gap-2">
-           <span className="px-3 py-1 bg-green-500/10 text-green-500 border border-green-500/20 rounded-full text-sm font-medium flex items-center gap-2">
-              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-              Sistema Online
+           <span className={`px-3 py-1 rounded-full text-sm font-medium flex items-center gap-2 ${status.includes('Online') ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 'bg-red-500/10 text-red-500 border border-red-500/20'}`}>
+              <span className={`w-2 h-2 rounded-full ${status.includes('Online') ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></span>
+              {status}
            </span>
         </div>
       </div>
@@ -98,10 +107,10 @@ export const Dashboard = () => {
             
             <div className="space-y-4 flex-1">
                 {[
-                    { name: 'Carlos Silva', val: 'R$ 12.500', pos: 1, avatar: 'CS' },
-                    { name: 'Ana Souza', val: 'R$ 10.200', pos: 2, avatar: 'AS' },
-                    { name: 'Roberto Jr', val: 'R$ 8.100', pos: 3, avatar: 'RJ' },
-                    { name: 'Fernanda L.', val: 'R$ 6.400', pos: 4, avatar: 'FL' },
+                    { name: 'Carlos Silva', val: 'R$ 12.500', pos: 1 },
+                    { name: 'Ana Souza', val: 'R$ 10.200', pos: 2 },
+                    { name: 'Roberto Jr', val: 'R$ 8.100', pos: 3 },
+                    { name: 'Fernanda L.', val: 'R$ 6.400', pos: 4 },
                 ].map((vendedor) => (
                     <div key={vendedor.pos} className="flex items-center gap-3 p-3 rounded-lg bg-dark-bg border border-slate-700 hover:border-bolt-500/50 hover:bg-slate-800 transition-all cursor-pointer group">
                         <div className={`
