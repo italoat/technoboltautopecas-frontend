@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MessageSquare, Send, Bot, User } from 'lucide-react';
+import { Send, Bot, User } from 'lucide-react';
 import api from '../services/api';
 
 export const AIChat = () => {
@@ -30,7 +30,6 @@ export const AIChat = () => {
   return (
     <div className="h-[calc(100vh-6rem)] flex flex-col p-4 max-w-4xl mx-auto">
       <div className="bg-dark-surface rounded-2xl border border-slate-700 flex-1 flex flex-col overflow-hidden shadow-2xl">
-        {/* Header */}
         <div className="p-4 border-b border-slate-700 bg-slate-800/50 flex items-center gap-3">
           <div className="w-10 h-10 bg-industrial-500 rounded-lg flex items-center justify-center text-black">
             <Bot size={24} />
@@ -41,7 +40,6 @@ export const AIChat = () => {
           </div>
         </div>
 
-        {/* Chat Area */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
           {messages.map((msg, idx) => (
             <div key={idx} className={`flex gap-4 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
@@ -56,7 +54,6 @@ export const AIChat = () => {
           {loading && <div className="text-slate-500 text-xs animate-pulse ml-14">Digitando...</div>}
         </div>
 
-        {/* Input */}
         <div className="p-4 bg-slate-900 border-t border-slate-700">
           <div className="flex gap-2">
             <input 
