@@ -4,7 +4,7 @@ import api from '../services/api';
 
 export const AIChat = () => {
   const [messages, setMessages] = useState<{role: 'user' | 'ai', text: string}[]>([
-    { role: 'ai', text: 'Olá! Sou o Consultor Técnico TechnoBolt. Posso ajudar com especificações de peças, compatibilidade ou dicas de manutenção. O que você precisa?' }
+    { role: 'ai', text: 'Olá! Sou seu assistente técnico. Pode me perguntar qualquer coisa sobre peças ou manutenção que eu explico de um jeito fácil.' }
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -18,10 +18,13 @@ export const AIChat = () => {
     setLoading(true);
 
     try {
-      const res = await api.post('/api/ai/consult', { prompt: userMsg });
+      // Modificamos a chamada para garantir que o prompt de sistema "humano" seja respeitado no backend
+      const promptContext = `Responda como uma pessoa prestativa e amigável, sem usar muitos termos técnicos complicados e sem formatação Markdown excessiva (sem negritos ou listas complexas). Pergunta: ${userMsg}`;
+      
+      const res = await api.post('/api/ai/consult', { prompt: promptContext });
       setMessages(prev => [...prev, { role: 'ai', text: res.data.response }]);
     } catch (err) {
-      setMessages(prev => [...prev, { role: 'ai', text: 'Desculpe, tive um erro de conexão.' }]);
+      setMessages(prev => [...prev, { role: 'ai', text: 'Ops, minha conexão falhou rapidinho. Pode perguntar de novo?' }]);
     } finally {
       setLoading(false);
     }
@@ -36,7 +39,7 @@ export const AIChat = () => {
           </div>
           <div>
             <h2 className="text-white font-bold">Consultor Técnico IA</h2>
-            <p className="text-slate-400 text-xs">Powered by Gemini 1.5 Flash</p>
+            <p className="text-slate-400 text-xs">Simples, rápido e direto.</p>
           </div>
         </div>
 
@@ -46,12 +49,12 @@ export const AIChat = () => {
               <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${msg.role === 'ai' ? 'bg-industrial-500 text-black' : 'bg-slate-600 text-white'}`}>
                 {msg.role === 'ai' ? <Bot size={16} /> : <User size={16} />}
               </div>
-              <div className={`p-4 rounded-2xl max-w-[80%] text-sm leading-relaxed ${msg.role === 'ai' ? 'bg-slate-800 text-slate-200 rounded-tl-none' : 'bg-bolt-600 text-white rounded-tr-none'}`}>
+              <div className={`p-4 rounded-2xl max-w-[80%] text-sm leading-relaxed shadow-sm ${msg.role === 'ai' ? 'bg-slate-800 text-slate-200 rounded-tl-none' : 'bg-bolt-600 text-white rounded-tr-none'}`}>
                 {msg.text}
               </div>
             </div>
           ))}
-          {loading && <div className="text-slate-500 text-xs animate-pulse ml-14">Digitando...</div>}
+          {loading && <div className="text-slate-500 text-xs animate-pulse ml-14">Escrevendo...</div>}
         </div>
 
         <div className="p-4 bg-slate-900 border-t border-slate-700">
@@ -59,7 +62,7 @@ export const AIChat = () => {
             <input 
               type="text" 
               className="flex-1 bg-dark-bg border border-slate-700 rounded-xl px-4 py-3 text-white outline-none focus:border-industrial-500 transition-all"
-              placeholder="Ex: Qual óleo usar no motor Fire 1.0?"
+              placeholder="Ex: Qual óleo vai no Celta 2010?"
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleSend()}
