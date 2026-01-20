@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, ShoppingCart, Trash2, Package, Plus, Minus, User, Percent, Send } from 'lucide-react'; // Removido CheckCircle
+import { Search, ShoppingCart, Trash2, Package, Plus, Minus, User, Percent, Send } from 'lucide-react';
 import api from '../services/api';
 
 // Interfaces
@@ -23,7 +23,7 @@ export const POS = () => {
   const [results, setResults] = useState<Product[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   
-  // --- NOVOS CAMPOS PARA O CAIXA ---
+  // NOVOS CAMPOS
   const [clientName, setClientName] = useState('Consumidor Final');
   const [discountPercent, setDiscountPercent] = useState<number>(0);
   
@@ -31,8 +31,9 @@ export const POS = () => {
   const [success, setSuccess] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   
-  // --- HELPER: Tratamento de ID da Loja ---
+  // --- HELPER: Tratamento de ID da Loja (Mais Robusto) ---
   const getStoreId = (id: any) => {
+    if (!id) return 1; // Fallback se for nulo
     if (typeof id === 'number') return id;
     if (typeof id === 'string') { 
         const match = id.match(/\d+/); 
@@ -59,7 +60,7 @@ export const POS = () => {
     localStorage.setItem('technobolt_cart', JSON.stringify(cart));
   }, [cart]);
 
-  // Busca com Debounce
+  // Busca
   useEffect(() => {
     const timeOutId = setTimeout(async () => {
       if (query.length > 2) {
@@ -74,16 +75,15 @@ export const POS = () => {
     return () => clearTimeout(timeOutId);
   }, [query]);
 
-  // Verifica Estoque Local
+  // Verifica Estoque
   const getLocalStock = (product: Product) => {
     const storeStock = product.stock_locations?.find(
       loc => Number(loc.loja_id) === currentStoreId || loc.nome === currentStoreName
     );
-    // Força conversão para garantir número
     return storeStock ? parseInt(String(storeStock.qtd), 10) : 0;
   };
 
-  // Adicionar ao Carrinho
+  // Adicionar Carrinho
   const addToCart = (product: Product) => {
     const stock = getLocalStock(product);
 
@@ -125,12 +125,12 @@ export const POS = () => {
     }));
   };
 
-  // --- CÁLCULOS FINANCEIROS ---
+  // Cálculos
   const subtotal = cart.reduce((acc, item) => acc + (item.price * item.cartQty), 0);
   const discountValue = (subtotal * discountPercent) / 100;
   const total = subtotal - discountValue;
 
-  // --- ENVIAR PARA O CAIXA (NOVO FLUXO) ---
+  // --- ENVIAR PARA O CAIXA (COM DEBUG DE ERRO) ---
   const handleSendToCashier = async () => {
     if (cart.length === 0) return alert('Carrinho vazio');
     
@@ -143,7 +143,7 @@ export const POS = () => {
         discount_percent: discountPercent,
         items: cart.map(i => ({ 
             part_id: i.id, 
-            name: i.name, // Importante para o caixa ler sem consultar o banco de novo
+            name: i.name, 
             quantity: i.cartQty, 
             unit_price: i.price 
         })),
@@ -151,26 +151,40 @@ export const POS = () => {
         total: total
       };
 
+      console.log("Enviando Payload:", payload); // Para debug no console (F12)
+
       await api.post('/api/sales/create', payload);
       
       setSuccess(true);
       setTimeout(() => {
-        setCart([]); // Limpa memória
-        localStorage.removeItem('technobolt_cart'); // Limpa persistência
+        setCart([]); 
+        localStorage.removeItem('technobolt_cart'); 
         setClientName('Consumidor Final');
         setDiscountPercent(0);
         setSuccess(false);
         setQuery('');
       }, 2500);
       
-    } catch (err) {
-      alert('Erro ao enviar para o caixa. Verifique a conexão.');
+    } catch (err: any) {
+      console.error("Erro completo:", err);
+      // EXIBE O ERRO REAL DO BACKEND
+      const errorDetail = err.response?.data?.detail;
+      let msg = "Erro desconhecido ao conectar com servidor.";
+      
+      if (typeof errorDetail === 'object') {
+        msg = JSON.stringify(errorDetail, null, 2); // Mostra lista de erros de validação
+      } else if (errorDetail) {
+        msg = errorDetail;
+      } else if (err.message) {
+        msg = err.message;
+      }
+
+      alert(`Falha no envio:\n${msg}`);
     } finally {
       setIsProcessing(false);
     }
   };
 
-  // TELA DE SUCESSO
   if (success) {
     return (
       <div className="h-full flex flex-col items-center justify-center bg-dark-bg animate-in zoom-in duration-300">
@@ -190,7 +204,6 @@ export const POS = () => {
   return (
     <div className="h-[calc(100vh-2rem)] flex gap-6 overflow-hidden">
       
-      {/* COLUNA ESQUERDA: Busca e Catálogo */}
       <div className="flex-1 flex flex-col gap-6">
         <div className="bg-dark-surface p-6 rounded-2xl border border-slate-700 shadow-lg">
           <label className="text-xs font-bold text-bolt-500 uppercase tracking-widest mb-2 block">
@@ -210,7 +223,6 @@ export const POS = () => {
           </div>
         </div>
 
-        {/* Lista de Resultados */}
         <div className="flex-1 bg-dark-surface rounded-2xl border border-slate-700 overflow-y-auto custom-scrollbar p-4">
           {results.length === 0 && !query && (
             <div className="h-full flex flex-col items-center justify-center text-slate-600 opacity-50">
@@ -255,7 +267,6 @@ export const POS = () => {
         </div>
       </div>
 
-      {/* COLUNA DIREITA: PRÉ-VENDA */}
       <div className="w-[420px] flex flex-col bg-dark-surface border border-slate-700 rounded-2xl shadow-2xl h-full">
         <div className="p-5 border-b border-slate-700 bg-slate-800/50 rounded-t-2xl flex justify-between items-center">
           <div className="flex items-center gap-2 text-white font-bold">
@@ -265,7 +276,6 @@ export const POS = () => {
           <span className="text-xs text-slate-500 font-mono">#{cart.length} itens</span>
         </div>
 
-        {/* INPUT DE CLIENTE */}
         <div className="p-4 border-b border-slate-700 bg-slate-900/30">
             <label className="text-[10px] text-slate-500 font-bold uppercase block mb-1 flex items-center gap-1">
                 <User size={10}/> Cliente Identificado
@@ -279,7 +289,6 @@ export const POS = () => {
             />
         </div>
 
-        {/* Lista Editável */}
         <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-2">
           {cart.length === 0 ? (
             <div className="h-40 flex items-center justify-center text-slate-600 text-sm italic">
@@ -323,7 +332,6 @@ export const POS = () => {
           )}
         </div>
 
-        {/* Totalizadores e Desconto */}
         <div className="bg-slate-900 p-6 border-t-4 border-slate-700">
           <div className="space-y-2 mb-6 text-sm">
             <div className="flex justify-between text-slate-400">
@@ -331,7 +339,6 @@ export const POS = () => {
               <span>R$ {subtotal.toFixed(2)}</span>
             </div>
             
-            {/* Campo Desconto (%) */}
             <div className="flex justify-between items-center text-green-400">
               <span className="flex items-center gap-1 font-bold">
                   <Percent size={14}/> Desconto (%)
