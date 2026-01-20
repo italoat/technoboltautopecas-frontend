@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
-import { Mail, Phone, User, Calendar, Star, Upload, FileSpreadsheet, Send, MessageCircle, Mic } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Mail, Phone, User, Calendar, Star, FileSpreadsheet, Send, MessageCircle, Mic } from 'lucide-react';
 import api from '../services/api';
 
 export const CRM = () => {
