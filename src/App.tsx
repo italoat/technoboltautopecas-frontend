@@ -6,6 +6,7 @@ import { Login } from './pages/Login';
 import { Vision } from './pages/Vision';
 import { POS } from './pages/POS'; // <--- Importação do Módulo PDV
 import { Logistics } from './pages/Logistics';
+import { Cashier } from './pages/Cashier';
 
 // Componente que protege a rota
 const PrivateRoute = ({ children }: { children: JSX.Element }) => {
@@ -39,6 +40,7 @@ function App() {
           <Route path="search" element={<PartsSearch />} />
           <Route path="pos" element={<POS />} /> {/* <--- Rota do PDV Adicionada */}
           <Route path="logistics" element={<Logistics />} />
+          <Route path="cashier" element={<Cashier />} />
           
           {/* Rotas Placeholder para links que ainda não existem */}
           <Route path="*" element={<div className="p-10 text-slate-500">Módulo em desenvolvimento...</div>} />
