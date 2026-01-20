@@ -1,55 +1,52 @@
 import React from 'react';
 import { Outlet } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Activity, Shield, Home, Settings, Menu } from 'lucide-react'; // Exemplo de ícones
-
-const Sidebar = () => (
-  <aside className="hidden md:flex flex-col w-64 h-screen bg-dark-surface border-r border-slate-700 text-white fixed left-0 top-0">
-    <div className="p-6 flex items-center gap-3">
-      <div className="w-8 h-8 bg-bolt-500 rounded-lg flex items-center justify-center">
-        <Activity className="text-white w-5 h-5" />
-      </div>
-      <span className="text-xl font-bold tracking-tight">TechnoBolt</span>
-    </div>
-    
-    <nav className="flex-1 px-4 py-4 space-y-2">
-      <NavItem icon={<Home size={20} />} label="Dashboard" active />
-      {/* Adapte estes itens dependendo se for Pets, Legal ou Gym */}
-      <NavItem icon={<Shield size={20} />} label="Módulos" />
-      <NavItem icon={<Settings size={20} />} label="Configurações" />
-    </nav>
-
-    <div className="p-4 border-t border-slate-700">
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-full bg-slate-600"></div>
-        <div>
-          <p className="text-sm font-medium">Usuário Admin</p>
-          <p className="text-xs text-slate-400">admin@technobolt.com</p>
-        </div>
-      </div>
-    </div>
-  </aside>
-);
-
-const NavItem = ({ icon, label, active }: { icon: any, label: string, active?: boolean }) => (
-  <a href="#" className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group ${active ? 'bg-bolt-500 shadow-lg shadow-bolt-500/20 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}>
-    {icon}
-    <span className="font-medium">{label}</span>
-    {active && <motion.div layoutId="activeIndicator" className="ml-auto w-1.5 h-1.5 bg-white rounded-full" />}
-  </a>
-);
+import { Sidebar } from './Sidebar';
+import { Bell, Search, User } from 'lucide-react';
 
 export const MainLayout = () => {
   return (
-    <div className="min-h-screen bg-dark-bg text-slate-100 pl-0 md:pl-64 transition-all">
-      <header className="md:hidden h-16 bg-dark-surface border-b border-slate-700 flex items-center px-4 justify-between">
-         <span className="font-bold text-lg">TechnoBolt</span>
-         <button className="p-2"><Menu /></button>
-      </header>
-      
-      <main className="p-6 md:p-10 max-w-7xl mx-auto">
-        <Outlet /> 
-      </main>
+    <div className="min-h-screen bg-dark-bg text-slate-100 flex">
+      {/* Sidebar Fixa */}
+      <Sidebar />
+
+      {/* Conteúdo Principal */}
+      <div className="flex-1 ml-64 flex flex-col min-w-0">
+        {/* Top Header */}
+        <header className="h-16 bg-dark-bg/80 backdrop-blur-md border-b border-slate-700 sticky top-0 z-40 px-8 flex items-center justify-between">
+          <div className="flex items-center gap-4 w-96">
+            <div className="relative w-full">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
+              <input 
+                type="text" 
+                placeholder="Busca global (Cliente, Nota, Pedido...)" 
+                className="w-full bg-slate-800/50 border border-slate-700 rounded-full pl-10 pr-4 py-1.5 text-sm focus:outline-none focus:border-bolt-500 focus:ring-1 focus:ring-bolt-500 transition-all placeholder:text-slate-500"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <button className="relative p-2 text-slate-400 hover:text-white transition-colors">
+              <Bell size={20} />
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-industrial-500 rounded-full border border-dark-bg"></span>
+            </button>
+            <div className="h-8 w-px bg-slate-700 mx-2"></div>
+            <div className="flex items-center gap-3 cursor-pointer hover:opacity-80">
+              <div className="text-right hidden md:block">
+                <p className="text-sm font-medium text-white">Vendedor Carlos</p>
+                <p className="text-xs text-slate-400">Matriz - ID: 4829</p>
+              </div>
+              <div className="w-9 h-9 bg-bolt-600 rounded-full flex items-center justify-center text-white font-bold border-2 border-slate-700">
+                VC
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* Área de Conteúdo das Páginas */}
+        <main className="p-8">
+          <Outlet />
+        </main>
+      </div>
     </div>
   );
 };
