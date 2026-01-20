@@ -12,9 +12,7 @@ import {
   MapPin, 
   Check, 
   Info,
-  X,
-  ChevronDown,
-  ChevronUp
+  ChevronDown
 } from 'lucide-react';
 
 // --- INTERFACES ---
@@ -51,7 +49,9 @@ export const PartsSearch = () => {
   // --- ESTADOS DO MINI PDV (POPUP) ---
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [isMiniCartOpen, setIsMiniCartOpen] = useState(false);
-  const miniCartTimerRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // CORREÇÃO AQUI: Tipagem universal para o setTimeout (funciona no Browser e Node)
+  const miniCartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const userStr = localStorage.getItem('technobolt_user') || localStorage.getItem('user');
   const user = userStr ? JSON.parse(userStr) : null;
