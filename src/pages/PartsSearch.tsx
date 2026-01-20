@@ -14,10 +14,10 @@ import {
   Info
 } from 'lucide-react';
 
-// Interfaces
+// Interface ajustada para o formato do MongoDB
 interface StockLocation {
   loja_id: number;
-  loja: string;
+  nome: string; // <--- O Banco usa 'nome', não 'loja'
   qtd: number;
 }
 
@@ -29,8 +29,8 @@ interface Part {
   price: number;
   image?: string;
   category?: string;
-  total_stock: number; // Estoque Total da Rede
-  stock_locations: StockLocation[]; // Estoque detalhado por loja
+  total_stock: number;
+  stock_locations: StockLocation[]; 
 }
 
 export const PartsSearch = () => {
@@ -40,13 +40,12 @@ export const PartsSearch = () => {
   const [analyzing, setAnalyzing] = useState(false);
   const [addedIds, setAddedIds] = useState<string[]>([]);
 
-  // --- RECUPERAÇÃO SEGURA DA LOJA ATUAL ---
   const userStr = localStorage.getItem('technobolt_user') || localStorage.getItem('user');
   const user = userStr ? JSON.parse(userStr) : null;
   
-  // Garante que o ID seja um número para comparação correta
+  // Garante comparação numérica e fallback
   const currentStoreId = user?.currentStore?.id ? Number(user.currentStore.id) : 1; 
-  const currentStoreName = user?.currentStore?.name || 'Matriz (Padrão)';
+  const currentStoreName = user?.currentStore?.name || 'Matriz';
 
   useEffect(() => {
     handleSearch("");
@@ -111,12 +110,11 @@ export const PartsSearch = () => {
     }, 2000);
   };
 
-  // --- LÓGICA DE ESTOQUE CORRIGIDA ---
+  // --- CORREÇÃO DE LEITURA DO ESTOQUE ---
   const getLocalStock = (part: Part) => {
-    // Procura por ID (Numérico) ou por String (Nome)
-    // Isso resolve o problema de incompatibilidade de tipos
+    // Procura por ID ou pelo Nome da loja (campo 'nome' do banco)
     const storeStock = part.stock_locations?.find(
-      loc => Number(loc.loja_id) === currentStoreId || loc.loja === currentStoreName
+      loc => Number(loc.loja_id) === currentStoreId || loc.nome === currentStoreName
     );
     return storeStock ? Number(storeStock.qtd) : 0;
   };
@@ -131,7 +129,6 @@ export const PartsSearch = () => {
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-20">
       
-      {/* Cabeçalho */}
       <div className="flex items-center justify-between px-2">
         <h2 className="text-2xl font-bold text-white flex items-center gap-2">
           <Package className="text-bolt-500" />
@@ -143,7 +140,6 @@ export const PartsSearch = () => {
         </div>
       </div>
 
-      {/* Barra de Busca */}
       <div className="bg-dark-surface p-6 rounded-2xl border border-slate-700 shadow-xl">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="relative flex-1">
@@ -171,7 +167,6 @@ export const PartsSearch = () => {
         </div>
       </div>
 
-      {/* Listagem */}
       <div className="space-y-4">
         {loading ? (
            <div className="text-center py-20 text-slate-400 flex flex-col items-center">
@@ -220,7 +215,6 @@ export const PartsSearch = () => {
                     </div>
 
                     <div className="mt-4 flex flex-col md:flex-row md:items-end justify-between gap-4">
-                      {/* Status de Estoque Inteligente */}
                       <div>
                         {localStock > 0 ? (
                           <div className="space-y-1">
@@ -237,10 +231,9 @@ export const PartsSearch = () => {
                               <AlertCircle size={16} /> Sem estoque local
                             </p>
                             
-                            {/* Observação Inteligente */}
                             {otherStore ? (
                               <p className="text-yellow-500 text-xs bg-yellow-500/10 px-2 py-1 rounded border border-yellow-500/20 flex items-center gap-1">
-                                <MapPin size={12} /> Tem na {otherStore.loja} ({otherStore.qtd} un.)
+                                <MapPin size={12} /> Tem na {otherStore.nome} ({otherStore.qtd} un.)
                               </p>
                             ) : totalRede > 0 ? (
                               <p className="text-slate-400 text-xs flex items-center gap-1">
