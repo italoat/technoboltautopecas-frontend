@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Search, ShoppingCart, Trash2, CreditCard, DollarSign, Smartphone, CheckCircle, Package, Plus, Minus } from 'lucide-react';
 import api from '../services/api';
 
-// Interfaces
+// Interface ajustada para refletir o banco: 'nome' em vez de 'loja'
 interface Product {
   id: string;
   name: string;
@@ -10,12 +10,12 @@ interface Product {
   brand: string;
   price: number;
   image: string;
-  stock_locations?: { loja_id: number; loja: string; qtd: number }[];
+  stock_locations?: { loja_id: number; nome: string; qtd: number }[]; 
 }
 
 interface CartItem extends Product {
   cartQty: number;
-  maxLocalStock: number; // Controle de limite
+  maxLocalStock: number;
 }
 
 export const POS = () => {
@@ -27,13 +27,13 @@ export const POS = () => {
   const [success, setSuccess] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   
-  // Recupera User e Loja
+  // Recupera User e Loja (Convertendo ID para número)
   const userStr = localStorage.getItem('technobolt_user') || localStorage.getItem('user');
   const user = userStr ? JSON.parse(userStr) : null;
-  const currentStoreId = user?.currentStore?.id || 0;
+  const currentStoreId = user?.currentStore?.id ? Number(user.currentStore.id) : 1;
   const currentStoreName = user?.currentStore?.name || '';
 
-  // 1. CARREGAR CARRINHO DO LOCALSTORAGE AO INICIAR
+  // 1. CARREGAR CARRINHO
   useEffect(() => {
     const savedCart = localStorage.getItem('technobolt_cart');
     if (savedCart) {
@@ -41,12 +41,12 @@ export const POS = () => {
     }
   }, []);
 
-  // 2. SEMPRE QUE O CARRINHO MUDAR, SALVAR NO LOCALSTORAGE
+  // 2. SALVAR CARRINHO
   useEffect(() => {
     localStorage.setItem('technobolt_cart', JSON.stringify(cart));
   }, [cart]);
 
-  // Busca em tempo real
+  // Busca
   useEffect(() => {
     const timeOutId = setTimeout(async () => {
       if (query.length > 2) {
@@ -61,15 +61,15 @@ export const POS = () => {
     return () => clearTimeout(timeOutId);
   }, [query]);
 
-  // Função para pegar estoque local de um produto pesquisado
+  // CORREÇÃO: Função para pegar estoque local usando 'nome'
   const getLocalStock = (product: Product) => {
     const storeStock = product.stock_locations?.find(
-      loc => loc.loja_id === currentStoreId || loc.loja === currentStoreName
+      loc => Number(loc.loja_id) === currentStoreId || loc.nome === currentStoreName
     );
-    return storeStock ? storeStock.qtd : 0;
+    return storeStock ? Number(storeStock.qtd) : 0;
   };
 
-  // ADICIONAR AO CARRINHO (Via Busca do PDV)
+  // ADICIONAR
   const addToCart = (product: Product) => {
     const stock = getLocalStock(product);
 
@@ -95,17 +95,16 @@ export const POS = () => {
     searchInputRef.current?.focus();
   };
 
-  // REMOVER DO CARRINHO
+  // REMOVER
   const removeFromCart = (id: string) => {
     setCart(prev => prev.filter(item => item.id !== id));
   };
 
-  // ALTERAR QUANTIDADE (+/-)
+  // ALTERAR QTD
   const updateQuantity = (id: string, delta: number) => {
     setCart(prev => prev.map(item => {
       if (item.id === id) {
         const newQty = item.cartQty + delta;
-        // Validações: não pode ser menor que 1, não pode ser maior que o estoque
         if (newQty > 0 && newQty <= item.maxLocalStock) {
           return { ...item, cartQty: newQty };
         }
@@ -114,12 +113,11 @@ export const POS = () => {
     }));
   };
 
-  // Cálculos
+  // Cálculos e Checkout (Mantidos iguais)
   const subtotal = cart.reduce((acc, item) => acc + (item.price * item.cartQty), 0);
   const discount = paymentMethod === 'pix' || paymentMethod === 'cash' ? subtotal * 0.05 : 0;
   const total = subtotal - discount;
 
-  // Finalizar Venda
   const handleCheckout = async () => {
     if (!paymentMethod) return alert('Selecione uma forma de pagamento');
     if (cart.length === 0) return alert('Carrinho vazio');
@@ -127,7 +125,7 @@ export const POS = () => {
     setIsProcessing(true);
     try {
       const payload = {
-        store_id: typeof currentStoreId === 'string' ? parseInt(currentStoreId) : currentStoreId,
+        store_id: currentStoreId,
         items: cart.map(i => ({ part_id: i.id, quantity: i.cartQty, unit_price: i.price })),
         payment_method: paymentMethod,
         total: total
@@ -137,8 +135,8 @@ export const POS = () => {
       
       setSuccess(true);
       setTimeout(() => {
-        setCart([]); // Limpa estado
-        localStorage.removeItem('technobolt_cart'); // Limpa memória persistente
+        setCart([]); 
+        localStorage.removeItem('technobolt_cart'); 
         setPaymentMethod('');
         setSuccess(false);
         setQuery('');
@@ -151,7 +149,6 @@ export const POS = () => {
     }
   };
 
-  // Tela de Sucesso
   if (success) {
     return (
       <div className="h-full flex flex-col items-center justify-center bg-dark-bg animate-in fade-in zoom-in duration-300">
@@ -171,7 +168,6 @@ export const POS = () => {
   return (
     <div className="h-[calc(100vh-2rem)] flex gap-6 overflow-hidden">
       
-      {/* COLUNA ESQUERDA: Busca e Catálogo */}
       <div className="flex-1 flex flex-col gap-6">
         <div className="bg-dark-surface p-6 rounded-2xl border border-slate-700 shadow-lg">
           <label className="text-xs font-bold text-bolt-500 uppercase tracking-widest mb-2 block">
@@ -191,7 +187,6 @@ export const POS = () => {
           </div>
         </div>
 
-        {/* Lista de Resultados da Busca do PDV */}
         <div className="flex-1 bg-dark-surface rounded-2xl border border-slate-700 overflow-y-auto custom-scrollbar p-4">
           {results.length === 0 && !query && (
             <div className="h-full flex flex-col items-center justify-center text-slate-600 opacity-50">
@@ -236,7 +231,6 @@ export const POS = () => {
         </div>
       </div>
 
-      {/* COLUNA DIREITA: Cupom Fiscal (CARRINHO) */}
       <div className="w-[420px] flex flex-col bg-dark-surface border border-slate-700 rounded-2xl shadow-2xl h-full">
         <div className="p-5 border-b border-slate-700 bg-slate-800/50 rounded-t-2xl flex justify-between items-center">
           <div className="flex items-center gap-2 text-white font-bold">
@@ -246,7 +240,6 @@ export const POS = () => {
           <span className="text-xs text-slate-500 font-mono">#{cart.length} itens</span>
         </div>
 
-        {/* Lista Editável */}
         <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-2">
           {cart.length === 0 ? (
             <div className="h-40 flex items-center justify-center text-slate-600 text-sm italic">
@@ -263,7 +256,6 @@ export const POS = () => {
                 </div>
                 
                 <div className="flex justify-between items-center bg-dark-bg p-2 rounded border border-slate-800">
-                   {/* Controle de Quantidade */}
                    <div className="flex items-center gap-3">
                       <button 
                         onClick={() => updateQuantity(item.id, -1)}
@@ -291,7 +283,6 @@ export const POS = () => {
           )}
         </div>
 
-        {/* Totalizadores */}
         <div className="bg-slate-900 p-6 border-t-4 border-slate-700">
           <div className="space-y-2 mb-6 text-sm">
             <div className="flex justify-between text-slate-400">
