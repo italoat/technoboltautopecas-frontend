@@ -30,12 +30,22 @@ export const Logistics = () => {
 
   // Estado para Listas
   const [transfers, setTransfers] = useState<Transfer[]>([]);
-  const [refresh, setRefresh] = useState(0); // Trigger para recarregar
+  const [refresh, setRefresh] = useState(0); 
 
-  // User Info
+  // --- CORREÇÃO DE ID: Extrai apenas números do ID da loja ---
+  const getStoreId = (id: any) => {
+    if (typeof id === 'number') return id;
+    if (typeof id === 'string') {
+        // Tenta pegar números de strings como "loja-01" -> 1
+        const match = id.match(/\d+/); 
+        return match ? parseInt(match[0], 10) : 1; 
+    }
+    return 1; // Fallback para Matriz
+  };
+
   const userStr = localStorage.getItem('technobolt_user') || localStorage.getItem('user');
   const user = userStr ? JSON.parse(userStr) : null;
-  const currentStoreId = user?.currentStore?.id ? Number(user.currentStore.id) : 1;
+  const currentStoreId = user?.currentStore?.id ? getStoreId(user.currentStore.id) : 1;
 
   // Carregar Listas
   useEffect(() => {
@@ -68,7 +78,7 @@ export const Logistics = () => {
       await api.post('/api/logistics/request', {
         part_id: selectedPart.id,
         from_store_id: originStore,
-        to_store_id: currentStoreId,
+        to_store_id: currentStoreId, // Agora envia um número Inteiro válido
         quantity: qty,
         type: reqType,
         user_id: user.name
@@ -78,10 +88,16 @@ export const Logistics = () => {
         setSuccessMsg('');
         setSelectedPart(null);
         setSearchTerm('');
-        setActiveTab('outgoing'); // Vai para aba de "Meus Pedidos"
+        setActiveTab('outgoing'); 
       }, 2000);
     } catch (err: any) {
-      alert(err.response?.data?.detail || "Erro ao criar pedido");
+      // --- CORREÇÃO DE ERRO [object Object] ---
+      const errorDetail = err.response?.data?.detail;
+      const msg = typeof errorDetail === 'object' 
+        ? JSON.stringify(errorDetail, null, 2) // Formata se for objeto
+        : (errorDetail || "Erro desconhecido ao criar pedido");
+        
+      alert(`Falha na solicitação:\n${msg}`);
     } finally { setIsProcessing(false); }
   };
 
@@ -95,13 +111,18 @@ export const Logistics = () => {
       });
       setRefresh(prev => prev + 1);
     } catch (err: any) {
-      alert(err.response?.data?.detail || "Erro ao atualizar");
+      // Mesmo tratamento de erro aqui
+      const errorDetail = err.response?.data?.detail;
+      const msg = typeof errorDetail === 'object' 
+        ? JSON.stringify(errorDetail) 
+        : (errorDetail || "Erro ao atualizar");
+      alert(msg);
     }
   };
 
   // Filtros de Lista
-  const myIncomingOrders = transfers.filter(t => t.to_store_id === currentStoreId); // O que eu pedi (Chegando)
-  const myOutgoingTasks = transfers.filter(t => t.from_store_id === currentStoreId); // O que pediram de mim (Saindo)
+  const myIncomingOrders = transfers.filter(t => t.to_store_id === currentStoreId); 
+  const myOutgoingTasks = transfers.filter(t => t.from_store_id === currentStoreId); 
 
   // Renderizadores de Status
   const renderStatus = (status: string) => {
