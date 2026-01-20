@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, ShoppingCart, Trash2, Package, Plus, Minus, User, Percent, Send } from 'lucide-react';
+import { Search, ShoppingCart, Trash2, Package, Plus, Minus, User, Percent, Send, Printer } from 'lucide-react';
 import api from '../services/api';
 
 // Interfaces
@@ -131,15 +131,80 @@ export const POS = () => {
   const discountAmount = (subtotal * discountVal) / 100;
   const total = subtotal - discountAmount;
 
-  // --- ENVIAR PARA O CAIXA (DEBUG CORRIGIDO) ---
+  // --- IMPRESSÃO DE CUPOM ---
+  const handlePrint = () => {
+    if (cart.length === 0) return alert('Carrinho vazio para imprimir.');
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return alert('Bloqueador de popup impediu a impressão.');
+
+    const date = new Date().toLocaleString();
+    const itemsHtml = cart.map(item => `
+      <tr>
+        <td style="text-align: left;">${item.name.substring(0, 20)}</td>
+        <td style="text-align: center;">${item.cartQty}</td>
+        <td style="text-align: right;">R$ ${item.price.toFixed(2)}</td>
+        <td style="text-align: right;">R$ {(item.price * item.cartQty).toFixed(2)}</td>
+      </tr>
+    `).join('');
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Cupom Não Fiscal - TechnoBolt</title>
+          <style>
+            body { font-family: 'Courier New', monospace; font-size: 12px; width: 300px; margin: 0 auto; }
+            h1, h2, p { margin: 0; text-align: center; }
+            .divider { border-top: 1px dashed #000; margin: 10px 0; }
+            table { width: 100%; border-collapse: collapse; }
+            th { border-bottom: 1px solid #000; text-align: left; }
+            .total-row { font-weight: bold; font-size: 14px; margin-top: 10px; display: flex; justify-content: space-between; }
+          </style>
+        </head>
+        <body>
+          <h1>TECHNOBOLT AUTOPEÇAS</h1>
+          <p>Loja: ${currentStoreName} (ID: ${currentStoreId})</p>
+          <p>${date}</p>
+          <div class="divider"></div>
+          <p><strong>CUPOM NÃO FISCAL</strong></p>
+          <p>Cliente: ${clientName || 'Consumidor Final'}</p>
+          <div class="divider"></div>
+          <table>
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Qtd</th>
+                <th>Unit</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itemsHtml}
+            </tbody>
+          </table>
+          <div class="divider"></div>
+          <div class="total-row"><span>Subtotal:</span> <span>R$ ${subtotal.toFixed(2)}</span></div>
+          <div class="total-row"><span>Desconto (${discountVal}%):</span> <span>- R$ ${discountAmount.toFixed(2)}</span></div>
+          <div class="total-row" style="font-size: 16px;"><span>TOTAL A PAGAR:</span> <span>R$ ${total.toFixed(2)}</span></div>
+          <div class="divider"></div>
+          <p>*** OBRIGADO PELA PREFERÊNCIA ***</p>
+          <script>
+            window.onload = function() { window.print(); window.close(); }
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
+  // --- ENVIAR PARA O CAIXA ---
   const handleSendToCashier = async () => {
     if (cart.length === 0) return alert('Carrinho vazio');
     
     setIsProcessing(true);
     try {
-      // Prepara Payload seguro
       const payload = {
-        store_id: Number(currentStoreId), // Garante número
+        store_id: Number(currentStoreId), 
         seller_name: user?.name || "Vendedor",
         client_name: clientName.trim() || "Consumidor Final",
         discount_percent: discountVal,
@@ -153,7 +218,7 @@ export const POS = () => {
         total: Number(total.toFixed(2))
       };
 
-      console.log("Enviando Payload:", payload); // Debug no F12
+      console.log("Enviando Payload:", payload); 
 
       await api.post('/api/sales/create', payload);
       
@@ -357,17 +422,29 @@ export const POS = () => {
             </div>
           </div>
 
-          <button 
-            onClick={handleSendToCashier}
-            disabled={isProcessing}
-            className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-500/20 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-lg tracking-wide uppercase flex items-center justify-center gap-2"
-          >
-            {isProcessing ? 'Enviando...' : (
-                <>
-                    <Send size={20}/> Enviar ao Caixa (F9)
-                </>
-            )}
-          </button>
+          {/* Botões de Ação */}
+          <div className="flex gap-3">
+            <button 
+              onClick={handlePrint}
+              disabled={cart.length === 0}
+              className="bg-slate-700 hover:bg-slate-600 text-white font-bold p-4 rounded-xl transition-all shadow-lg active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+              title="Imprimir Cupom"
+            >
+              <Printer size={24} />
+            </button>
+
+            <button 
+              onClick={handleSendToCashier}
+              disabled={isProcessing}
+              className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-500/20 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-lg tracking-wide uppercase flex items-center justify-center gap-2"
+            >
+              {isProcessing ? 'Enviando...' : (
+                  <>
+                      <Send size={20}/> Enviar ao Caixa (F9)
+                  </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
     </div>
