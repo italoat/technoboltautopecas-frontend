@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FileText, AlertTriangle, CheckCircle, Search, Save } from 'lucide-react';
+import { FileText, Save, Loader2 } from 'lucide-react';
 import api from '../services/api';
 
 export const Fiscal = () => {
@@ -12,7 +12,6 @@ export const Fiscal = () => {
 
   const loadData = async () => {
     try {
-      // Busca produtos (na prática, filtraria os com erro fiscal)
       const res = await api.get('/api/parts'); 
       setProducts(res.data);
     } catch (error) {
@@ -21,6 +20,14 @@ export const Fiscal = () => {
       setLoading(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex h-full items-center justify-center text-slate-500 gap-2">
+        <Loader2 className="animate-spin" /> Carregando módulo fiscal...
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 animate-in fade-in duration-500">
