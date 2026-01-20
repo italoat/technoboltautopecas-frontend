@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, ShoppingCart, Trash2, CreditCard, DollarSign, Smartphone, CheckCircle, Package, Plus, Minus } from 'lucide-react';
+import { Search, ShoppingCart, Trash2, Package, Plus, Minus, User, Percent, Send, CheckCircle } from 'lucide-react';
 import api from '../services/api';
 
-// Interface ajustada para refletir o banco: 'nome' em vez de 'loja'
+// Interfaces
 interface Product {
   id: string;
   name: string;
@@ -22,15 +22,28 @@ export const POS = () => {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Product[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [paymentMethod, setPaymentMethod] = useState<string>('');
+  
+  // --- NOVOS CAMPOS PARA O CAIXA ---
+  const [clientName, setClientName] = useState('Consumidor Final');
+  const [discountPercent, setDiscountPercent] = useState<number>(0);
+  
   const [isProcessing, setIsProcessing] = useState(false);
   const [success, setSuccess] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   
-  // Recupera User e Loja (Convertendo ID para número)
+  // --- HELPER: Tratamento de ID da Loja ---
+  const getStoreId = (id: any) => {
+    if (typeof id === 'number') return id;
+    if (typeof id === 'string') { 
+        const match = id.match(/\d+/); 
+        return match ? parseInt(match[0], 10) : 1; 
+    }
+    return 1;
+  };
+
   const userStr = localStorage.getItem('technobolt_user') || localStorage.getItem('user');
   const user = userStr ? JSON.parse(userStr) : null;
-  const currentStoreId = user?.currentStore?.id ? Number(user.currentStore.id) : 1;
+  const currentStoreId = user?.currentStore?.id ? getStoreId(user.currentStore.id) : 1;
   const currentStoreName = user?.currentStore?.name || '';
 
   // 1. CARREGAR CARRINHO
@@ -46,7 +59,7 @@ export const POS = () => {
     localStorage.setItem('technobolt_cart', JSON.stringify(cart));
   }, [cart]);
 
-  // Busca
+  // Busca com Debounce
   useEffect(() => {
     const timeOutId = setTimeout(async () => {
       if (query.length > 2) {
@@ -61,15 +74,16 @@ export const POS = () => {
     return () => clearTimeout(timeOutId);
   }, [query]);
 
-  // CORREÇÃO: Função para pegar estoque local usando 'nome'
+  // Verifica Estoque Local
   const getLocalStock = (product: Product) => {
     const storeStock = product.stock_locations?.find(
       loc => Number(loc.loja_id) === currentStoreId || loc.nome === currentStoreName
     );
-    return storeStock ? Number(storeStock.qtd) : 0;
+    // Força conversão para garantir número
+    return storeStock ? parseInt(String(storeStock.qtd), 10) : 0;
   };
 
-  // ADICIONAR
+  // Adicionar ao Carrinho
   const addToCart = (product: Product) => {
     const stock = getLocalStock(product);
 
@@ -95,12 +109,10 @@ export const POS = () => {
     searchInputRef.current?.focus();
   };
 
-  // REMOVER
   const removeFromCart = (id: string) => {
     setCart(prev => prev.filter(item => item.id !== id));
   };
 
-  // ALTERAR QTD
   const updateQuantity = (id: string, delta: number) => {
     setCart(prev => prev.map(item => {
       if (item.id === id) {
@@ -113,53 +125,63 @@ export const POS = () => {
     }));
   };
 
-  // Cálculos e Checkout (Mantidos iguais)
+  // --- CÁLCULOS FINANCEIROS ---
   const subtotal = cart.reduce((acc, item) => acc + (item.price * item.cartQty), 0);
-  const discount = paymentMethod === 'pix' || paymentMethod === 'cash' ? subtotal * 0.05 : 0;
-  const total = subtotal - discount;
+  const discountValue = (subtotal * discountPercent) / 100;
+  const total = subtotal - discountValue;
 
-  const handleCheckout = async () => {
-    if (!paymentMethod) return alert('Selecione uma forma de pagamento');
+  // --- ENVIAR PARA O CAIXA (NOVO FLUXO) ---
+  const handleSendToCashier = async () => {
     if (cart.length === 0) return alert('Carrinho vazio');
     
     setIsProcessing(true);
     try {
       const payload = {
         store_id: currentStoreId,
-        items: cart.map(i => ({ part_id: i.id, quantity: i.cartQty, unit_price: i.price })),
-        payment_method: paymentMethod,
+        seller_name: user?.name || "Vendedor",
+        client_name: clientName,
+        discount_percent: discountPercent,
+        items: cart.map(i => ({ 
+            part_id: i.id, 
+            name: i.name, // Importante para o caixa ler sem consultar o banco de novo
+            quantity: i.cartQty, 
+            unit_price: i.price 
+        })),
+        subtotal: subtotal,
         total: total
       };
 
-      await api.post('/api/sales/checkout', payload);
+      await api.post('/api/sales/create', payload);
       
       setSuccess(true);
       setTimeout(() => {
-        setCart([]); 
-        localStorage.removeItem('technobolt_cart'); 
-        setPaymentMethod('');
+        setCart([]); // Limpa memória
+        localStorage.removeItem('technobolt_cart'); // Limpa persistência
+        setClientName('Consumidor Final');
+        setDiscountPercent(0);
         setSuccess(false);
         setQuery('');
-      }, 3000);
+      }, 2500);
       
     } catch (err) {
-      alert('Erro ao processar venda.');
+      alert('Erro ao enviar para o caixa. Verifique a conexão.');
     } finally {
       setIsProcessing(false);
     }
   };
 
+  // TELA DE SUCESSO
   if (success) {
     return (
-      <div className="h-full flex flex-col items-center justify-center bg-dark-bg animate-in fade-in zoom-in duration-300">
-        <div className="w-24 h-24 bg-green-500 rounded-full flex items-center justify-center mb-6 shadow-[0_0_30px_#22c55e]">
-          <CheckCircle className="text-white w-12 h-12" />
+      <div className="h-full flex flex-col items-center justify-center bg-dark-bg animate-in zoom-in duration-300">
+        <div className="w-24 h-24 bg-blue-500 rounded-full flex items-center justify-center mb-6 shadow-[0_0_30px_#3b82f6]">
+          <Send className="text-white w-12 h-12 ml-1" />
         </div>
-        <h1 className="text-4xl font-bold text-white mb-2">Venda Realizada!</h1>
-        <p className="text-slate-400 text-lg">Estoque atualizado e nota emitida.</p>
-        <div className="mt-8 bg-slate-800 p-4 rounded-xl border border-slate-700">
-            <p className="text-slate-300">Valor Final</p>
-            <p className="text-3xl font-mono font-bold text-green-400">R$ {total.toFixed(2)}</p>
+        <h1 className="text-4xl font-bold text-white mb-2">Enviado para o Caixa!</h1>
+        <p className="text-slate-400 text-lg">O cliente pode realizar o pagamento no balcão.</p>
+        <div className="mt-8 bg-slate-800 p-4 rounded-xl border border-slate-700 min-w-[200px] text-center">
+            <p className="text-slate-300 text-sm uppercase font-bold">Total a Receber</p>
+            <p className="text-3xl font-mono font-bold text-blue-400">R$ {total.toFixed(2)}</p>
         </div>
       </div>
     );
@@ -168,6 +190,7 @@ export const POS = () => {
   return (
     <div className="h-[calc(100vh-2rem)] flex gap-6 overflow-hidden">
       
+      {/* COLUNA ESQUERDA: Busca e Catálogo */}
       <div className="flex-1 flex flex-col gap-6">
         <div className="bg-dark-surface p-6 rounded-2xl border border-slate-700 shadow-lg">
           <label className="text-xs font-bold text-bolt-500 uppercase tracking-widest mb-2 block">
@@ -187,6 +210,7 @@ export const POS = () => {
           </div>
         </div>
 
+        {/* Lista de Resultados */}
         <div className="flex-1 bg-dark-surface rounded-2xl border border-slate-700 overflow-y-auto custom-scrollbar p-4">
           {results.length === 0 && !query && (
             <div className="h-full flex flex-col items-center justify-center text-slate-600 opacity-50">
@@ -231,19 +255,35 @@ export const POS = () => {
         </div>
       </div>
 
+      {/* COLUNA DIREITA: PRÉ-VENDA */}
       <div className="w-[420px] flex flex-col bg-dark-surface border border-slate-700 rounded-2xl shadow-2xl h-full">
         <div className="p-5 border-b border-slate-700 bg-slate-800/50 rounded-t-2xl flex justify-between items-center">
           <div className="flex items-center gap-2 text-white font-bold">
             <ShoppingCart className="text-bolt-500" />
-            <span>ITENS DA VENDA</span>
+            <span>PRÉ-VENDA</span>
           </div>
           <span className="text-xs text-slate-500 font-mono">#{cart.length} itens</span>
         </div>
 
+        {/* INPUT DE CLIENTE */}
+        <div className="p-4 border-b border-slate-700 bg-slate-900/30">
+            <label className="text-[10px] text-slate-500 font-bold uppercase block mb-1 flex items-center gap-1">
+                <User size={10}/> Cliente Identificado
+            </label>
+            <input 
+                type="text" 
+                className="w-full bg-dark-bg border border-slate-700 rounded p-2 text-sm text-white focus:border-bolt-500 outline-none transition-colors"
+                value={clientName}
+                onChange={e => setClientName(e.target.value)}
+                placeholder="Nome do Cliente (Opcional)"
+            />
+        </div>
+
+        {/* Lista Editável */}
         <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-2">
           {cart.length === 0 ? (
             <div className="h-40 flex items-center justify-center text-slate-600 text-sm italic">
-              Adicione itens na busca ou aqui
+              Adicione itens na busca
             </div>
           ) : (
             cart.map((item, idx) => (
@@ -283,50 +323,45 @@ export const POS = () => {
           )}
         </div>
 
+        {/* Totalizadores e Desconto */}
         <div className="bg-slate-900 p-6 border-t-4 border-slate-700">
           <div className="space-y-2 mb-6 text-sm">
             <div className="flex justify-between text-slate-400">
               <span>Subtotal</span>
               <span>R$ {subtotal.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between text-green-400">
-              <span>Descontos</span>
-              <span>- R$ {discount.toFixed(2)}</span>
+            
+            {/* Campo Desconto (%) */}
+            <div className="flex justify-between items-center text-green-400">
+              <span className="flex items-center gap-1 font-bold">
+                  <Percent size={14}/> Desconto (%)
+              </span>
+              <input 
+                type="number" 
+                min="0" 
+                max="100" 
+                className="w-20 bg-slate-800 border border-slate-600 rounded p-1 text-right text-white focus:border-green-500 outline-none"
+                value={discountPercent} 
+                onChange={e => setDiscountPercent(Number(e.target.value))} 
+              />
             </div>
+            
             <div className="flex justify-between text-white text-3xl font-bold pt-2 border-t border-slate-700">
               <span>Total</span>
               <span>R$ {total.toFixed(2)}</span>
             </div>
           </div>
 
-          <p className="text-xs font-bold text-slate-500 uppercase mb-2">Pagamento</p>
-          <div className="grid grid-cols-3 gap-2 mb-6">
-            <button 
-              onClick={() => setPaymentMethod('credit')}
-              className={`p-3 rounded-lg border flex flex-col items-center gap-1 transition-all ${paymentMethod === 'credit' ? 'bg-bolt-500 text-white border-bolt-500' : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700'}`}
-            >
-              <CreditCard size={20} /> <span className="text-[10px]">Crédito</span>
-            </button>
-            <button 
-              onClick={() => setPaymentMethod('pix')}
-              className={`p-3 rounded-lg border flex flex-col items-center gap-1 transition-all ${paymentMethod === 'pix' ? 'bg-green-600 text-white border-green-600' : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700'}`}
-            >
-              <Smartphone size={20} /> <span className="text-[10px]">PIX</span>
-            </button>
-            <button 
-              onClick={() => setPaymentMethod('cash')}
-              className={`p-3 rounded-lg border flex flex-col items-center gap-1 transition-all ${paymentMethod === 'cash' ? 'bg-green-600 text-white border-green-600' : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700'}`}
-            >
-              <DollarSign size={20} /> <span className="text-[10px]">Dinheiro</span>
-            </button>
-          </div>
-
           <button 
-            onClick={handleCheckout}
+            onClick={handleSendToCashier}
             disabled={isProcessing}
-            className="w-full bg-bolt-500 hover:bg-bolt-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-bolt-500/20 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-lg tracking-wide uppercase"
+            className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-500/20 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-lg tracking-wide uppercase flex items-center justify-center gap-2"
           >
-            {isProcessing ? 'Processando...' : 'Finalizar Venda (F9)'}
+            {isProcessing ? 'Enviando...' : (
+                <>
+                    <Send size={20}/> Enviar ao Caixa (F9)
+                </>
+            )}
           </button>
         </div>
       </div>
