@@ -32,13 +32,18 @@ const modules = [
 export const Sidebar = () => {
   const navigate = useNavigate();
   
-  // Recupera dados do usuário e da loja selecionada
+  // Recupera dados do usuário e da loja selecionada com tratamento de erro seguro
   const userStr = localStorage.getItem('user');
-  const user = userStr ? JSON.parse(userStr) : null;
+  let user = null;
+  try {
+    user = userStr ? JSON.parse(userStr) : null;
+  } catch (e) {
+    console.error("Erro ao ler usuário", e);
+  }
+  
   const currentStore = user?.currentStore || { name: 'Loja Não Selecionada', id: '---' };
 
   const handleLogout = () => {
-    // Limpa a sessão e volta para o login
     localStorage.removeItem('user');
     navigate('/login');
   };
@@ -90,19 +95,28 @@ export const Sidebar = () => {
               ${mod.highlight && !isActive ? 'border border-bolt-500/30 bg-bolt-500/5 text-bolt-500 hover:bg-bolt-500 hover:text-white' : ''}
             `}
           >
-            <mod.icon size={18} className={`${mod.highlight ? "text-inherit" : ""} group-hover:scale-110 transition-transform`} />
-            <span>{mod.name}</span>
-            
-            {/* Badge "NOVO" */}
-            {mod.new && (
-              <span className="ml-auto text-[9px] bg-industrial-500 text-black px-1.5 py-0.5 rounded font-bold shadow-sm shadow-industrial-500/20">
-                NOVO
-              </span>
-            )}
-            
-            {/* Indicador Ativo (Bolinha) */}
-            {({ isActive }: { isActive: boolean }) => isActive && (
-               <div className="absolute right-2 w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
+            {/* AQUI ESTAVA O ERRO: Agora usamos a função para envolver o conteúdo */}
+            {({ isActive }) => (
+              <>
+                <mod.icon 
+                  size={18} 
+                  className={`${mod.highlight ? "text-inherit" : ""} group-hover:scale-110 transition-transform`} 
+                />
+                
+                <span>{mod.name}</span>
+                
+                {/* Badge "NOVO" */}
+                {mod.new && (
+                  <span className="ml-auto text-[9px] bg-industrial-500 text-black px-1.5 py-0.5 rounded font-bold shadow-sm shadow-industrial-500/20">
+                    NOVO
+                  </span>
+                )}
+                
+                {/* Indicador Ativo (Bolinha) - Agora funciona pois está dentro do escopo da função */}
+                {isActive && (
+                   <div className="absolute right-2 w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
+                )}
+              </>
             )}
           </NavLink>
         ))}
