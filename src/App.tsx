@@ -7,6 +7,12 @@ import { Vision } from './pages/Vision';
 import { POS } from './pages/POS'; // <--- Importação do Módulo PDV
 import { Logistics } from './pages/Logistics';
 import { Cashier } from './pages/Cashier';
+import { Fiscal } from './pages/Fiscal';
+import { Inventory } from './pages/Inventory';
+import { Purchases } from './pages/Purchases';
+import { CRM } from './pages/CRM';
+import { AIChat } from './pages/AIChat';
+import { TeamChat } from './pages/TeamChat';
 
 // Componente que protege a rota
 const PrivateRoute = ({ children }: { children: JSX.Element }) => {
@@ -41,6 +47,12 @@ function App() {
           <Route path="pos" element={<POS />} /> {/* <--- Rota do PDV Adicionada */}
           <Route path="logistics" element={<Logistics />} />
           <Route path="cashier" element={<Cashier />} />
+          <Route path="fiscal" element={<Fiscal />} />
+          <Route path="inventory" element={<Inventory />} />
+          <Route path="purchases" element={<Purchases />} />
+          <Route path="crm" element={<CRM />} />
+          <Route path="ai-chat" element={<AIChat />} />
+          <Route path="team-chat" element={<TeamChat />} />
           
           {/* Rotas Placeholder para links que ainda não existem */}
           <Route path="*" element={<div className="p-10 text-slate-500">Módulo em desenvolvimento...</div>} />
