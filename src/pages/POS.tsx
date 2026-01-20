@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Search, ShoppingCart, Trash2, CreditCard, DollarSign, Smartphone, CheckCircle, Package } from 'lucide-react';
 import api from '../services/api';
-import { useNavigate } from 'react-router-dom';
+// useNavigate removido pois não estava sendo usado
 
 // Tipos
 interface Product {
@@ -11,6 +11,7 @@ interface Product {
   brand: string;
   price: number;
   quantity: number; // Estoque total
+  image: string;    // <--- CORREÇÃO: Adicionado campo imagem
 }
 
 interface CartItem extends Product {
@@ -29,7 +30,7 @@ export const POS = () => {
   // Recupera Loja Atual
   const userStr = localStorage.getItem('technobolt_user') || localStorage.getItem('user');
   const user = userStr ? JSON.parse(userStr) : null;
-  const currentStoreId = user?.currentStore?.id || 1; // Fallback para loja 1 se der erro
+  const currentStoreId = user?.currentStore?.id || 1; 
 
   // Busca em tempo real (Debounce simples)
   useEffect(() => {
@@ -163,7 +164,7 @@ export const POS = () => {
               >
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 bg-white p-1 rounded-lg">
-                    <img src={product.image || 'placeholder.png'} className="w-full h-full object-contain" />
+                    <img src={product.image || 'placeholder.png'} className="w-full h-full object-contain" alt={product.name} />
                   </div>
                   <div>
                     <h3 className="font-bold text-white group-hover:text-bolt-400">{product.name}</h3>
