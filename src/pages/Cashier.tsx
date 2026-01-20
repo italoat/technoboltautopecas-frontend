@@ -26,6 +26,7 @@ export const Cashier = () => {
 
   // Recupera Loja (Tratamento de ID)
   const getStoreId = (id: any) => {
+    if (!id) return 1;
     if (typeof id === 'number') return id;
     if (typeof id === 'string') { 
         const match = id.match(/\d+/); 
