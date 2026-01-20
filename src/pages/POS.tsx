@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, ShoppingCart, Trash2, Package, Plus, Minus, User, Percent, Send, CheckCircle } from 'lucide-react';
+import { Search, ShoppingCart, Trash2, Package, Plus, Minus, User, Percent, Send } from 'lucide-react'; // Removido CheckCircle
 import api from '../services/api';
 
 // Interfaces
