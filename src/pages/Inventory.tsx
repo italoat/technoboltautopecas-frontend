@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Box, RefreshCw, Check, AlertCircle } from 'lucide-react';
+import { Box, RefreshCw, Check } from 'lucide-react';
 import api from '../services/api';
 
 export const Inventory = () => {
@@ -18,7 +18,6 @@ export const Inventory = () => {
     const status = diff === 0 ? 'Correto' : diff > 0 ? `Sobra (+${diff})` : `Falta (${diff})`;
     
     alert(`Auditoria Registrada:\nItem ID: ${id}\nSistema: ${systemQty}\nContagem: ${counted}\nStatus: ${status}`);
-    // Aqui chamaria a API de ajuste de estoque
   };
 
   return (
@@ -40,7 +39,7 @@ export const Inventory = () => {
           <div key={item.id} className="bg-dark-surface p-4 rounded-xl border border-slate-700 flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="w-10 h-10 bg-white rounded flex items-center justify-center">
-                <img src={item.image} className="w-full h-full object-contain p-1" />
+                <img src={item.image} className="w-full h-full object-contain p-1" alt={item.name} />
               </div>
               <div>
                 <p className="text-white font-bold text-sm">{item.name}</p>
