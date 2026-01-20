@@ -23,17 +23,17 @@ export const POS = () => {
   const [results, setResults] = useState<Product[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   
-  // NOVOS CAMPOS
-  const [clientName, setClientName] = useState('Consumidor Final');
-  const [discountPercent, setDiscountPercent] = useState<number>(0);
+  // --- NOVOS CAMPOS PARA O CAIXA ---
+  const [clientName, setClientName] = useState('');
+  const [discountPercent, setDiscountPercent] = useState<string>('0'); // String para input controlado
   
   const [isProcessing, setIsProcessing] = useState(false);
   const [success, setSuccess] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   
-  // --- HELPER: Tratamento de ID da Loja (Mais Robusto) ---
+  // --- HELPER: Tratamento de ID da Loja ---
   const getStoreId = (id: any) => {
-    if (!id) return 1; // Fallback se for nulo
+    if (!id) return 1;
     if (typeof id === 'number') return id;
     if (typeof id === 'string') { 
         const match = id.match(/\d+/); 
@@ -125,33 +125,35 @@ export const POS = () => {
     }));
   };
 
-  // Cálculos
+  // --- CÁLCULOS FINANCEIROS ---
   const subtotal = cart.reduce((acc, item) => acc + (item.price * item.cartQty), 0);
-  const discountValue = (subtotal * discountPercent) / 100;
-  const total = subtotal - discountValue;
+  const discountVal = parseFloat(discountPercent) || 0;
+  const discountAmount = (subtotal * discountVal) / 100;
+  const total = subtotal - discountAmount;
 
-  // --- ENVIAR PARA O CAIXA (COM DEBUG DE ERRO) ---
+  // --- ENVIAR PARA O CAIXA (DEBUG CORRIGIDO) ---
   const handleSendToCashier = async () => {
     if (cart.length === 0) return alert('Carrinho vazio');
     
     setIsProcessing(true);
     try {
+      // Prepara Payload seguro
       const payload = {
-        store_id: currentStoreId,
+        store_id: Number(currentStoreId), // Garante número
         seller_name: user?.name || "Vendedor",
-        client_name: clientName,
-        discount_percent: discountPercent,
+        client_name: clientName.trim() || "Consumidor Final",
+        discount_percent: discountVal,
         items: cart.map(i => ({ 
             part_id: i.id, 
             name: i.name, 
-            quantity: i.cartQty, 
-            unit_price: i.price 
+            quantity: Number(i.cartQty), 
+            unit_price: Number(i.price) 
         })),
-        subtotal: subtotal,
-        total: total
+        subtotal: Number(subtotal.toFixed(2)),
+        total: Number(total.toFixed(2))
       };
 
-      console.log("Enviando Payload:", payload); // Para debug no console (F12)
+      console.log("Enviando Payload:", payload); // Debug no F12
 
       await api.post('/api/sales/create', payload);
       
@@ -159,26 +161,22 @@ export const POS = () => {
       setTimeout(() => {
         setCart([]); 
         localStorage.removeItem('technobolt_cart'); 
-        setClientName('Consumidor Final');
-        setDiscountPercent(0);
+        setClientName('');
+        setDiscountPercent('0');
         setSuccess(false);
         setQuery('');
       }, 2500);
       
     } catch (err: any) {
       console.error("Erro completo:", err);
-      // EXIBE O ERRO REAL DO BACKEND
       const errorDetail = err.response?.data?.detail;
       let msg = "Erro desconhecido ao conectar com servidor.";
       
       if (typeof errorDetail === 'object') {
-        msg = JSON.stringify(errorDetail, null, 2); // Mostra lista de erros de validação
+        msg = JSON.stringify(errorDetail, null, 2);
       } else if (errorDetail) {
         msg = errorDetail;
-      } else if (err.message) {
-        msg = err.message;
       }
-
       alert(`Falha no envio:\n${msg}`);
     } finally {
       setIsProcessing(false);
@@ -349,7 +347,7 @@ export const POS = () => {
                 max="100" 
                 className="w-20 bg-slate-800 border border-slate-600 rounded p-1 text-right text-white focus:border-green-500 outline-none"
                 value={discountPercent} 
-                onChange={e => setDiscountPercent(Number(e.target.value))} 
+                onChange={e => setDiscountPercent(e.target.value)} 
               />
             </div>
             
