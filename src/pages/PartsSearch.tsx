@@ -7,10 +7,19 @@ import {
   Loader2, 
   AlertCircle, 
   Package, 
-  Store 
+  Store,
+  Plus,
+  MapPin,
+  Check
 } from 'lucide-react';
 
-// Definição da interface baseada no seu banco de dados 'estoque'
+// Interface atualizada com stock_locations do backend
+interface StockLocation {
+  loja_id: number;
+  loja: string; // Nome da loja
+  qtd: number;
+}
+
 interface Part {
   id: string;
   name: string;
@@ -19,7 +28,8 @@ interface Part {
   price: number;
   image?: string;
   category?: string;
-  stock_quantity?: number;
+  total_stock: number;
+  stock_locations: StockLocation[]; // Lista de estoques por loja
 }
 
 export const PartsSearch = () => {
@@ -27,13 +37,16 @@ export const PartsSearch = () => {
   const [parts, setParts] = useState<Part[]>([]);
   const [loading, setLoading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
+  const [addedIds, setAddedIds] = useState<string[]>([]); // Feedback visual de item adicionado
 
-  // Recupera a loja selecionada para dar contexto à busca
-  const userStr = localStorage.getItem('user');
+  // Recupera dados do usuário para saber qual loja ele está operando
+  const userStr = localStorage.getItem('technobolt_user') || localStorage.getItem('user');
   const user = userStr ? JSON.parse(userStr) : null;
-  const currentStore = user?.currentStore || { name: 'Loja Padrão' };
+  
+  // Normaliza o ID/Nome da loja atual para comparação
+  const currentStoreName = user?.currentStore?.name || '';
+  const currentStoreId = user?.currentStore?.id || 0;
 
-  // Busca inicial ao carregar a página
   useEffect(() => {
     handleSearch("");
   }, []);
@@ -41,7 +54,6 @@ export const PartsSearch = () => {
   const handleSearch = async (term = searchTerm) => {
     setLoading(true);
     try {
-      // Faz a chamada para o backend no Render
       const response = await api.get(`/api/parts?q=${term}`);
       setParts(response.data);
     } catch (error) {
@@ -60,27 +72,72 @@ export const PartsSearch = () => {
     formData.append('file', file);
 
     try {
-      // Envia para o rodízio de chaves Gemini no Backend
       const response = await api.post('/api/ai/identify', formData);
       const aiData = response.data;
-      
-      // Preenche o campo de busca com o que a IA identificou
       setSearchTerm(aiData.name);
       handleSearch(aiData.name);
-      
-      // Feedback visual para o usuário
-      console.log(`IA Identificou: ${aiData.name} (${aiData.confidence})`);
     } catch (error) {
-      alert("A IA não conseguiu identificar esta imagem. Tente uma foto mais nítida.");
+      alert("A IA não conseguiu identificar esta imagem.");
     } finally {
       setAnalyzing(false);
     }
   };
 
+  // --- LÓGICA DE ADICIONAR AO CARRINHO (INTEGRAÇÃO COM PDV) ---
+  const handleAddToCart = (part: Part, currentStock: number) => {
+    if (currentStock <= 0) return;
+
+    // 1. Ler carrinho atual
+    const savedCart = localStorage.getItem('technobolt_cart');
+    let cart = savedCart ? JSON.parse(savedCart) : [];
+
+    // 2. Verificar se já existe
+    const existingIndex = cart.findIndex((item: any) => item.id === part.id);
+
+    if (existingIndex >= 0) {
+      // Se já existe, soma +1 (se tiver estoque)
+      if (cart[existingIndex].cartQty < currentStock) {
+        cart[existingIndex].cartQty += 1;
+      } else {
+        alert("Limite de estoque atingido para este item.");
+        return;
+      }
+    } else {
+      // Se não existe, adiciona novo com o estoque máximo local registrado
+      cart.push({ ...part, cartQty: 1, maxLocalStock: currentStock });
+    }
+
+    // 3. Salvar volta no localStorage
+    localStorage.setItem('technobolt_cart', JSON.stringify(cart));
+
+    // 4. Feedback Visual
+    setAddedIds(prev => [...prev, part.id]);
+    setTimeout(() => {
+      setAddedIds(prev => prev.filter(id => id !== part.id));
+    }, 2000);
+  };
+
+  // Função auxiliar para encontrar estoque da loja atual
+  const getLocalStock = (part: Part) => {
+    // Tenta achar pela ID ou pelo Nome da loja (depende de como o backend retorna)
+    const storeStock = part.stock_locations?.find(
+      loc => loc.loja_id === currentStoreId || loc.loja === currentStoreName
+    );
+    return storeStock ? storeStock.qtd : 0;
+  };
+
+  // Função para verificar se tem em OUTRA loja (caso não tenha na atual)
+  const getOtherStoreAvailability = (part: Part) => {
+    const otherStores = part.stock_locations?.filter(
+      loc => loc.qtd > 0 && (loc.loja_id !== currentStoreId && loc.loja !== currentStoreName)
+    );
+    return otherStores && otherStores.length > 0 ? otherStores[0] : null;
+  };
+
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
+    <div className="space-y-6 animate-in fade-in duration-500 pb-20">
       
-      {/* Cabeçalho de Contexto */}
+      {/* Cabeçalho */}
       <div className="flex items-center justify-between px-2">
         <h2 className="text-2xl font-bold text-white flex items-center gap-2">
           <Package className="text-bolt-500" />
@@ -88,18 +145,18 @@ export const PartsSearch = () => {
         </h2>
         <div className="flex items-center gap-2 text-slate-400 text-sm bg-slate-800/50 px-3 py-1.5 rounded-full border border-slate-700">
           <Store size={14} />
-          <span>Buscando em: <strong>{currentStore.name}</strong></span>
+          <span>Loja Atual: <strong>{currentStoreName}</strong></span>
         </div>
       </div>
 
-      {/* Barra de Busca e Vision IA */}
+      {/* Barra de Busca */}
       <div className="bg-dark-surface p-6 rounded-2xl border border-slate-700 shadow-xl">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500" size={20} />
             <input 
               type="text"
-              placeholder="Pesquise por nome, código original ou fabricante..."
+              placeholder="Pesquise por nome, código ou marca..."
               className="w-full bg-dark-bg border border-slate-600 rounded-xl py-4 pl-14 pr-4 text-white text-lg focus:border-bolt-500 focus:ring-1 focus:ring-bolt-500 outline-none transition-all placeholder:text-slate-600"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -108,21 +165,10 @@ export const PartsSearch = () => {
           </div>
           
           <div className="relative">
-            <input 
-              type="file" 
-              id="vision-upload" 
-              className="hidden" 
-              accept="image/*"
-              onChange={handleImageUpload}
-              disabled={analyzing}
-            />
+            <input type="file" id="vision-upload" className="hidden" accept="image/*" onChange={handleImageUpload} disabled={analyzing} />
             <label 
               htmlFor="vision-upload"
-              className={`
-                h-full bg-industrial-500 hover:bg-industrial-600 text-black font-bold px-8 py-4 rounded-xl 
-                flex items-center gap-3 transition-all active:scale-95 cursor-pointer shadow-lg shadow-industrial-500/10
-                ${analyzing ? 'opacity-50 cursor-not-allowed' : ''}
-              `}
+              className={`h-full bg-industrial-500 hover:bg-industrial-600 text-black font-bold px-8 py-4 rounded-xl flex items-center gap-3 transition-all active:scale-95 cursor-pointer shadow-lg shadow-industrial-500/10 ${analyzing ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               {analyzing ? <Loader2 className="animate-spin" /> : <Camera size={22} />}
               <span>{analyzing ? 'Analisando...' : 'Vision IA'}</span>
@@ -131,79 +177,100 @@ export const PartsSearch = () => {
         </div>
       </div>
 
-      {/* Listagem de Peças */}
+      {/* Listagem */}
       <div className="space-y-4">
         {loading ? (
            <div className="text-center py-20 text-slate-400 flex flex-col items-center">
              <Loader2 className="animate-spin mb-4 text-bolt-500" size={40} />
-             <p className="font-medium">Sincronizando com banco de dados...</p>
+             <p className="font-medium">Carregando catálogo...</p>
            </div>
         ) : parts.length === 0 ? (
            <div className="text-center py-20 bg-dark-surface/30 border border-dashed border-slate-700 rounded-2xl">
              <AlertCircle className="mx-auto mb-4 text-slate-600" size={48} />
-             <p className="text-slate-400 text-lg">Nenhuma peça encontrada.</p>
-             <p className="text-slate-600 text-sm mt-1">Tente ajustar os filtros ou use a busca por foto.</p>
+             <p className="text-slate-400 text-lg">Nenhum item encontrado.</p>
            </div>
         ) : (
           <div className="grid grid-cols-1 gap-4">
-            {parts.map((part) => (
-              <div 
-                key={part.id} 
-                className="bg-dark-surface rounded-xl border border-slate-700 p-5 flex flex-col md:flex-row gap-6 hover:border-bolt-500/50 hover:bg-slate-800/40 transition-all group"
-              >
-                {/* Preview da Peça */}
-                <div className="w-full md:w-32 h-32 bg-dark-bg rounded-lg flex items-center justify-center text-slate-700 border border-slate-700 overflow-hidden shrink-0">
-                  {part.image ? (
-                    <img src={part.image} alt={part.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <Package size={40} className="opacity-20" />
-                  )}
-                </div>
+            {parts.map((part) => {
+              const localStock = getLocalStock(part);
+              const otherStore = localStock === 0 ? getOtherStoreAvailability(part) : null;
+              const isAdded = addedIds.includes(part.id);
 
-                {/* Detalhes Técnicos */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex flex-col md:flex-row justify-between items-start gap-2">
+              return (
+                <div key={part.id} className="bg-dark-surface rounded-xl border border-slate-700 p-5 flex flex-col md:flex-row gap-6 hover:border-bolt-500/50 transition-all group relative overflow-hidden">
+                  
+                  {/* Feedback visual de adicionado */}
+                  {isAdded && (
+                    <div className="absolute inset-0 bg-green-500/10 z-10 flex items-center justify-center backdrop-blur-[1px] animate-in fade-in">
+                       <div className="bg-green-500 text-white px-4 py-2 rounded-full font-bold shadow-lg flex items-center gap-2">
+                         <Check size={20} /> Adicionado ao PDV
+                       </div>
+                    </div>
+                  )}
+
+                  {/* Imagem */}
+                  <div className="w-full md:w-32 h-32 bg-white p-2 rounded-lg flex items-center justify-center overflow-hidden shrink-0">
+                    <img src={part.image || 'https://via.placeholder.com/150'} alt={part.name} className="w-full h-full object-contain" />
+                  </div>
+
+                  {/* Dados */}
+                  <div className="flex-1 min-w-0 flex flex-col justify-between">
                     <div>
-                      <h3 className="text-xl font-bold text-white group-hover:text-bolt-400 transition-colors truncate">
-                        {part.name}
-                      </h3>
+                      <div className="flex justify-between items-start">
+                        <h3 className="text-xl font-bold text-white truncate">{part.name}</h3>
+                        <p className="text-2xl font-black text-white">R$ {part.price?.toFixed(2)}</p>
+                      </div>
+                      
                       <div className="flex flex-wrap gap-2 mt-2">
-                        <span className="bg-slate-800 text-slate-300 px-2.5 py-1 rounded-md text-xs font-bold border border-slate-700 uppercase tracking-tighter">
-                          {part.brand || 'Genérica'}
-                        </span>
-                        <span className="bg-slate-900/50 text-slate-500 px-2.5 py-1 rounded-md text-xs font-mono border border-slate-800">
-                          REF: {part.code}
-                        </span>
-                        {part.category && (
-                          <span className="bg-bolt-500/10 text-bolt-500 px-2.5 py-1 rounded-md text-xs font-medium border border-bolt-500/20">
-                            {part.category}
-                          </span>
-                        )}
+                        <span className="bg-slate-800 text-slate-300 px-2 py-0.5 rounded text-xs font-bold border border-slate-700 uppercase">{part.brand}</span>
+                        <span className="bg-slate-900 text-slate-500 px-2 py-0.5 rounded text-xs font-mono border border-slate-800">{part.code}</span>
                       </div>
                     </div>
-                    
-                    <div className="text-right w-full md:w-auto mt-2 md:mt-0">
-                      <p className="text-2xl font-black text-white">
-                        R$ {part.price?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </p>
-                      <p className={`text-xs font-bold mt-1 ${part.stock_quantity && part.stock_quantity > 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                        {part.stock_quantity && part.stock_quantity > 0 
-                          ? `${part.stock_quantity} unidades em estoque` 
-                          : 'Sem estoque físico'}
-                      </p>
+
+                    <div className="mt-4 flex flex-col md:flex-row md:items-end justify-between gap-4">
+                      {/* Status de Estoque */}
+                      <div>
+                        {localStock > 0 ? (
+                          <p className="text-emerald-400 font-bold text-sm flex items-center gap-1">
+                            <Package size={16} /> {localStock} disponíveis nesta loja
+                          </p>
+                        ) : (
+                          <div className="space-y-1">
+                            <p className="text-red-500 font-bold text-sm flex items-center gap-1">
+                              <AlertCircle size={16} /> Sem estoque local
+                            </p>
+                            {/* Observação de outra loja */}
+                            {otherStore && (
+                              <p className="text-yellow-500 text-xs bg-yellow-500/10 px-2 py-1 rounded border border-yellow-500/20 flex items-center gap-1">
+                                <MapPin size={12} /> Disponível em: {otherStore.loja} ({otherStore.qtd} un.)
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Botão Adicionar */}
+                      <button 
+                        onClick={() => handleAddToCart(part, localStock)}
+                        disabled={localStock === 0}
+                        className={`
+                          px-6 py-3 rounded-lg font-bold flex items-center justify-center gap-2 transition-all shadow-lg active:scale-95
+                          ${localStock > 0 
+                            ? 'bg-bolt-500 hover:bg-bolt-600 text-white shadow-bolt-500/10' 
+                            : 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'}
+                        `}
+                      >
+                        {localStock > 0 ? (
+                          <><Plus size={18} /> Adicionar</>
+                        ) : (
+                          <><ShoppingCart size={18} /> Indisponível</>
+                        )}
+                      </button>
                     </div>
                   </div>
                 </div>
-
-                {/* Botão de Ação */}
-                <div className="flex md:flex-col justify-end gap-2 shrink-0">
-                  <button className="flex-1 md:flex-none bg-bolt-500 hover:bg-bolt-600 text-white px-6 py-3 rounded-lg font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-bolt-500/10 active:scale-95">
-                    <ShoppingCart size={18} />
-                    Vender
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
