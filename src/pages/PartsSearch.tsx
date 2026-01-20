@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import api from '../services/api';
 import { 
   Search, 
@@ -7,17 +7,20 @@ import {
   Loader2, 
   AlertCircle, 
   Package, 
-  Store,
-  Plus,
-  MapPin,
-  Check,
-  Info
+  Store, 
+  Plus, 
+  MapPin, 
+  Check, 
+  Info,
+  X,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 
-// Interface ajustada para o formato do MongoDB
+// --- INTERFACES ---
 interface StockLocation {
   loja_id: number;
-  nome: string; // <--- O Banco usa 'nome', não 'loja'
+  nome: string;
   qtd: number;
 }
 
@@ -33,24 +36,38 @@ interface Part {
   stock_locations: StockLocation[]; 
 }
 
+// Interface para item do carrinho (extende Part com qtd)
+interface CartItem extends Part {
+  cartQty: number;
+}
+
 export const PartsSearch = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [parts, setParts] = useState<Part[]>([]);
   const [loading, setLoading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [addedIds, setAddedIds] = useState<string[]>([]);
+  
+  // --- ESTADOS DO MINI PDV (POPUP) ---
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [isMiniCartOpen, setIsMiniCartOpen] = useState(false);
+  const miniCartTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const userStr = localStorage.getItem('technobolt_user') || localStorage.getItem('user');
   const user = userStr ? JSON.parse(userStr) : null;
-  
-  // Garante comparação numérica e fallback
   const currentStoreId = user?.currentStore?.id ? Number(user.currentStore.id) : 1; 
   const currentStoreName = user?.currentStore?.name || 'Matriz';
 
+  // Carrega carrinho inicial
   useEffect(() => {
+    const savedCart = localStorage.getItem('technobolt_cart');
+    if (savedCart) {
+      setCartItems(JSON.parse(savedCart));
+    }
     handleSearch("");
   }, []);
 
+  // --- BUSCA ---
   const handleSearch = async (term = searchTerm) => {
     setLoading(true);
     try {
@@ -83,36 +100,48 @@ export const PartsSearch = () => {
     }
   };
 
+  // --- ADICIONAR AO CARRINHO E CONTROLAR POPUP ---
   const handleAddToCart = (part: Part, currentStock: number) => {
     if (currentStock <= 0) return;
 
-    const savedCart = localStorage.getItem('technobolt_cart');
-    let cart = savedCart ? JSON.parse(savedCart) : [];
-
-    const existingIndex = cart.findIndex((item: any) => item.id === part.id);
-
-    if (existingIndex >= 0) {
-      if (cart[existingIndex].cartQty < currentStock) {
-        cart[existingIndex].cartQty += 1;
+    // Atualiza Carrinho
+    setCartItems(prev => {
+      const existing = prev.find(item => item.id === part.id);
+      let newCart;
+      
+      if (existing) {
+        if (existing.cartQty < currentStock) {
+          newCart = prev.map(item => item.id === part.id ? { ...item, cartQty: item.cartQty + 1 } : item);
+        } else {
+          alert("Limite de estoque atingido para este item.");
+          return prev;
+        }
       } else {
-        alert("Limite de estoque atingido para este item.");
-        return;
+        newCart = [...prev, { ...part, cartQty: 1 }];
       }
-    } else {
-      cart.push({ ...part, cartQty: 1, maxLocalStock: currentStock });
-    }
+      
+      localStorage.setItem('technobolt_cart', JSON.stringify(newCart));
+      return newCart;
+    });
 
-    localStorage.setItem('technobolt_cart', JSON.stringify(cart));
-
+    // Feedback Visual no Card
     setAddedIds(prev => [...prev, part.id]);
     setTimeout(() => {
       setAddedIds(prev => prev.filter(id => id !== part.id));
     }, 2000);
+
+    // --- LÓGICA DO POPUP ---
+    setIsMiniCartOpen(true); // Abre o popup
+    
+    // Reseta o timer de 1 minuto (60000ms)
+    if (miniCartTimerRef.current) clearTimeout(miniCartTimerRef.current);
+    miniCartTimerRef.current = setTimeout(() => {
+      setIsMiniCartOpen(false); // Minimiza após 1 min
+    }, 60000);
   };
 
-  // --- CORREÇÃO DE LEITURA DO ESTOQUE ---
+  // Funções Auxiliares de Estoque
   const getLocalStock = (part: Part) => {
-    // Procura por ID ou pelo Nome da loja (campo 'nome' do banco)
     const storeStock = part.stock_locations?.find(
       loc => Number(loc.loja_id) === currentStoreId || loc.nome === currentStoreName
     );
@@ -126,9 +155,13 @@ export const PartsSearch = () => {
     return otherStores && otherStores.length > 0 ? otherStores[0] : null;
   };
 
+  // Total do Carrinho para o Popup
+  const cartTotal = cartItems.reduce((acc, item) => acc + (item.price * item.cartQty), 0);
+
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 pb-20">
+    <div className="space-y-6 animate-in fade-in duration-500 pb-20 relative">
       
+      {/* HEADER */}
       <div className="flex items-center justify-between px-2">
         <h2 className="text-2xl font-bold text-white flex items-center gap-2">
           <Package className="text-bolt-500" />
@@ -140,6 +173,7 @@ export const PartsSearch = () => {
         </div>
       </div>
 
+      {/* BARRA DE BUSCA */}
       <div className="bg-dark-surface p-6 rounded-2xl border border-slate-700 shadow-xl">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="relative flex-1">
@@ -167,6 +201,7 @@ export const PartsSearch = () => {
         </div>
       </div>
 
+      {/* LISTA DE PRODUTOS */}
       <div className="space-y-4">
         {loading ? (
            <div className="text-center py-20 text-slate-400 flex flex-col items-center">
@@ -270,6 +305,66 @@ export const PartsSearch = () => {
           </div>
         )}
       </div>
+
+      {/* --- POPUP MINI PDV FLUTUANTE --- */}
+      {cartItems.length > 0 && (
+        <div className={`fixed right-6 bottom-6 z-50 transition-all duration-300 ${isMiniCartOpen ? 'w-80' : 'w-16 h-16 rounded-full overflow-hidden hover:scale-110'}`}>
+          <div className={`bg-slate-900 border border-slate-700 shadow-2xl flex flex-col transition-all overflow-hidden ${isMiniCartOpen ? 'rounded-2xl h-96' : 'h-full w-full rounded-full items-center justify-center cursor-pointer bg-bolt-600 border-bolt-500'}`}
+               onClick={() => !isMiniCartOpen && setIsMiniCartOpen(true)}
+          >
+            {/* Header do Popup (ou Ícone quando fechado) */}
+            <div className={`flex items-center justify-between p-3 ${isMiniCartOpen ? 'bg-slate-800 border-b border-slate-700' : 'p-0'}`}>
+              {isMiniCartOpen ? (
+                <>
+                  <div className="flex items-center gap-2 font-bold text-white text-sm">
+                    <ShoppingCart size={16} className="text-bolt-500"/> PDV Rápido ({cartItems.length})
+                  </div>
+                  <button onClick={(e) => { e.stopPropagation(); setIsMiniCartOpen(false); }} className="text-slate-400 hover:text-white">
+                    <ChevronDown size={18} />
+                  </button>
+                </>
+              ) : (
+                <ShoppingCart size={24} className="text-white" />
+              )}
+            </div>
+
+            {/* Conteúdo do Popup (Só renderiza se aberto) */}
+            {isMiniCartOpen && (
+              <>
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-2">
+                  {cartItems.map((item, idx) => (
+                    <div key={idx} className="flex justify-between items-center bg-slate-800/50 p-2 rounded text-xs border border-slate-700 animate-in slide-in-from-right duration-300">
+                      <div className="truncate flex-1 pr-2">
+                        <p className="text-white font-medium truncate">{item.name}</p>
+                        <p className="text-slate-500">{item.cartQty}x R$ {item.price.toFixed(2)}</p>
+                      </div>
+                      <p className="text-bolt-400 font-bold">R$ {(item.price * item.cartQty).toFixed(2)}</p>
+                    </div>
+                  ))}
+                </div>
+                
+                <div className="p-3 bg-slate-800 border-t border-slate-700">
+                  <div className="flex justify-between items-center text-sm font-bold text-white mb-2">
+                    <span>Total</span>
+                    <span>R$ {cartTotal.toFixed(2)}</span>
+                  </div>
+                  <button onClick={() => window.location.href='/pos'} className="w-full bg-bolt-500 hover:bg-bolt-600 text-white text-xs font-bold py-2 rounded flex items-center justify-center gap-1 transition-colors">
+                    Ir para Pagamento
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+          
+          {/* Badge de contador quando fechado */}
+          {!isMiniCartOpen && (
+            <div className="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center border border-slate-900">
+              {cartItems.length}
+            </div>
+          )}
+        </div>
+      )}
+
     </div>
   );
 };
