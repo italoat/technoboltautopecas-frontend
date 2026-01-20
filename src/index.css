@@ -7,9 +7,9 @@
 }
 
 body {
-  background-color: #0f172a; /* Garante o fundo escuro */
-  margin: 0;
-  font-family: 'Inter', sans-serif;
+  background-color: #0f172a;
+  color: white;
+  font-family: sans-serif;
 }
 
 /* Scrollbar Bonita */
@@ -26,3 +26,4 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #64748b;
 }
+
