@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { Camera, RefreshCcw, XCircle, Loader2, ScanFace, AlertTriangle } from 'lucide-react';
 import api from '../services/api';
 import { useNavigate } from 'react-router-dom';
