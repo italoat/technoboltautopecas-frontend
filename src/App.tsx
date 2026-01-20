@@ -1,10 +1,11 @@
+import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { MainLayout } from './layouts/MainLayout';
 import { Dashboard } from './pages/Dashboard';
 import { PartsSearch } from './pages/PartsSearch';
 import { Login } from './pages/Login';
 import { Vision } from './pages/Vision';
-import { POS } from './pages/POS'; // <--- Importação do Módulo PDV
+import { POS } from './pages/POS';
 import { Logistics } from './pages/Logistics';
 import { Cashier } from './pages/Cashier';
 import { Fiscal } from './pages/Fiscal';
@@ -13,13 +14,28 @@ import { Purchases } from './pages/Purchases';
 import { CRM } from './pages/CRM';
 import { AIChat } from './pages/AIChat';
 import { TeamChat } from './pages/TeamChat';
-import { ProductRegistration } from './pages/ProductRegistration'; // Importe Novo
+import { ProductRegistration } from './pages/ProductRegistration';
 
 // Componente que protege a rota
 const PrivateRoute = ({ children }: { children: JSX.Element }) => {
   // Verifica ambas as chaves para garantir compatibilidade
   const user = localStorage.getItem('technobolt_user') || localStorage.getItem('user');
   return user ? children : <Navigate to="/login" />;
+};
+
+// Componente de Redirecionamento Inteligente
+const HomeRedirect = () => {
+  // Verifica a largura da tela ao carregar (768px é o padrão tablet/mobile)
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Se for mobile, redireciona para o Vision. Se for Desktop, mostra o Dashboard.
+  return isMobile ? <Navigate to="/vision" replace /> : <Dashboard />;
 };
 
 function App() {
@@ -43,12 +59,14 @@ function App() {
             <MainLayout />
           </PrivateRoute>
         }>
-          <Route index element={<Dashboard />} />
+          {/* Rota Index com Lógica de Decisão (Mobile vs Desktop) */}
+          <Route index element={<HomeRedirect />} />
+          
           <Route path="search" element={<PartsSearch />} />
-          <Route path="pos" element={<POS />} /> {/* <--- Rota do PDV Adicionada */}
+          <Route path="pos" element={<POS />} />
           <Route path="logistics" element={<Logistics />} />
           <Route path="cashier" element={<Cashier />} />
-          <Route path="products/new" element={<ProductRegistration />} /> {/* Rota Nova */}
+          <Route path="products/new" element={<ProductRegistration />} />
           <Route path="fiscal" element={<Fiscal />} />
           <Route path="inventory" element={<Inventory />} />
           <Route path="purchases" element={<Purchases />} />
