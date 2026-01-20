@@ -6,7 +6,8 @@ export const Dashboard = () => {
   const [status, setStatus] = useState('Conectando...');
 
   useEffect(() => {
-    api.get('/') // Ajustei para '/' pois é a rota raiz do backend que retorna status
+    // CORREÇÃO APLICADA AQUI
+    api.get('/') // Ajustado para a rota raiz
       .then(res => setStatus(res.data.status || 'Online'))
       .catch(() => setStatus('Backend Offline'));
   }, []);
