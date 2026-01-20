@@ -10,13 +10,14 @@ import {
   Store,
   Plus,
   MapPin,
-  Check
+  Check,
+  Info
 } from 'lucide-react';
 
-// Interface atualizada com stock_locations do backend
+// Interfaces
 interface StockLocation {
   loja_id: number;
-  loja: string; // Nome da loja
+  loja: string;
   qtd: number;
 }
 
@@ -28,8 +29,8 @@ interface Part {
   price: number;
   image?: string;
   category?: string;
-  total_stock: number;
-  stock_locations: StockLocation[]; // Lista de estoques por loja
+  total_stock: number; // Estoque Total da Rede
+  stock_locations: StockLocation[]; // Estoque detalhado por loja
 }
 
 export const PartsSearch = () => {
@@ -37,15 +38,15 @@ export const PartsSearch = () => {
   const [parts, setParts] = useState<Part[]>([]);
   const [loading, setLoading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
-  const [addedIds, setAddedIds] = useState<string[]>([]); // Feedback visual de item adicionado
+  const [addedIds, setAddedIds] = useState<string[]>([]);
 
-  // Recupera dados do usuário para saber qual loja ele está operando
+  // --- RECUPERAÇÃO SEGURA DA LOJA ATUAL ---
   const userStr = localStorage.getItem('technobolt_user') || localStorage.getItem('user');
   const user = userStr ? JSON.parse(userStr) : null;
   
-  // Normaliza o ID/Nome da loja atual para comparação
-  const currentStoreName = user?.currentStore?.name || '';
-  const currentStoreId = user?.currentStore?.id || 0;
+  // Garante que o ID seja um número para comparação correta
+  const currentStoreId = user?.currentStore?.id ? Number(user.currentStore.id) : 1; 
+  const currentStoreName = user?.currentStore?.name || 'Matriz (Padrão)';
 
   useEffect(() => {
     handleSearch("");
@@ -83,19 +84,15 @@ export const PartsSearch = () => {
     }
   };
 
-  // --- LÓGICA DE ADICIONAR AO CARRINHO (INTEGRAÇÃO COM PDV) ---
   const handleAddToCart = (part: Part, currentStock: number) => {
     if (currentStock <= 0) return;
 
-    // 1. Ler carrinho atual
     const savedCart = localStorage.getItem('technobolt_cart');
     let cart = savedCart ? JSON.parse(savedCart) : [];
 
-    // 2. Verificar se já existe
     const existingIndex = cart.findIndex((item: any) => item.id === part.id);
 
     if (existingIndex >= 0) {
-      // Se já existe, soma +1 (se tiver estoque)
       if (cart[existingIndex].cartQty < currentStock) {
         cart[existingIndex].cartQty += 1;
       } else {
@@ -103,33 +100,30 @@ export const PartsSearch = () => {
         return;
       }
     } else {
-      // Se não existe, adiciona novo com o estoque máximo local registrado
       cart.push({ ...part, cartQty: 1, maxLocalStock: currentStock });
     }
 
-    // 3. Salvar volta no localStorage
     localStorage.setItem('technobolt_cart', JSON.stringify(cart));
 
-    // 4. Feedback Visual
     setAddedIds(prev => [...prev, part.id]);
     setTimeout(() => {
       setAddedIds(prev => prev.filter(id => id !== part.id));
     }, 2000);
   };
 
-  // Função auxiliar para encontrar estoque da loja atual
+  // --- LÓGICA DE ESTOQUE CORRIGIDA ---
   const getLocalStock = (part: Part) => {
-    // Tenta achar pela ID ou pelo Nome da loja (depende de como o backend retorna)
+    // Procura por ID (Numérico) ou por String (Nome)
+    // Isso resolve o problema de incompatibilidade de tipos
     const storeStock = part.stock_locations?.find(
-      loc => loc.loja_id === currentStoreId || loc.loja === currentStoreName
+      loc => Number(loc.loja_id) === currentStoreId || loc.loja === currentStoreName
     );
-    return storeStock ? storeStock.qtd : 0;
+    return storeStock ? Number(storeStock.qtd) : 0;
   };
 
-  // Função para verificar se tem em OUTRA loja (caso não tenha na atual)
   const getOtherStoreAvailability = (part: Part) => {
     const otherStores = part.stock_locations?.filter(
-      loc => loc.qtd > 0 && (loc.loja_id !== currentStoreId && loc.loja !== currentStoreName)
+      loc => Number(loc.qtd) > 0 && Number(loc.loja_id) !== currentStoreId
     );
     return otherStores && otherStores.length > 0 ? otherStores[0] : null;
   };
@@ -145,7 +139,7 @@ export const PartsSearch = () => {
         </h2>
         <div className="flex items-center gap-2 text-slate-400 text-sm bg-slate-800/50 px-3 py-1.5 rounded-full border border-slate-700">
           <Store size={14} />
-          <span>Loja Atual: <strong>{currentStoreName}</strong></span>
+          <span>Loja: <strong>{currentStoreName}</strong> (ID: {currentStoreId})</span>
         </div>
       </div>
 
@@ -193,13 +187,13 @@ export const PartsSearch = () => {
           <div className="grid grid-cols-1 gap-4">
             {parts.map((part) => {
               const localStock = getLocalStock(part);
+              const totalRede = part.total_stock;
               const otherStore = localStock === 0 ? getOtherStoreAvailability(part) : null;
               const isAdded = addedIds.includes(part.id);
 
               return (
                 <div key={part.id} className="bg-dark-surface rounded-xl border border-slate-700 p-5 flex flex-col md:flex-row gap-6 hover:border-bolt-500/50 transition-all group relative overflow-hidden">
                   
-                  {/* Feedback visual de adicionado */}
                   {isAdded && (
                     <div className="absolute inset-0 bg-green-500/10 z-10 flex items-center justify-center backdrop-blur-[1px] animate-in fade-in">
                        <div className="bg-green-500 text-white px-4 py-2 rounded-full font-bold shadow-lg flex items-center gap-2">
@@ -208,12 +202,10 @@ export const PartsSearch = () => {
                     </div>
                   )}
 
-                  {/* Imagem */}
                   <div className="w-full md:w-32 h-32 bg-white p-2 rounded-lg flex items-center justify-center overflow-hidden shrink-0">
                     <img src={part.image || 'https://via.placeholder.com/150'} alt={part.name} className="w-full h-full object-contain" />
                   </div>
 
-                  {/* Dados */}
                   <div className="flex-1 min-w-0 flex flex-col justify-between">
                     <div>
                       <div className="flex justify-between items-start">
@@ -228,28 +220,39 @@ export const PartsSearch = () => {
                     </div>
 
                     <div className="mt-4 flex flex-col md:flex-row md:items-end justify-between gap-4">
-                      {/* Status de Estoque */}
+                      {/* Status de Estoque Inteligente */}
                       <div>
                         {localStock > 0 ? (
-                          <p className="text-emerald-400 font-bold text-sm flex items-center gap-1">
-                            <Package size={16} /> {localStock} disponíveis nesta loja
-                          </p>
+                          <div className="space-y-1">
+                             <p className="text-emerald-400 font-bold text-sm flex items-center gap-1">
+                               <Package size={16} /> {localStock} un. nesta loja
+                             </p>
+                             {totalRede > localStock && (
+                               <p className="text-slate-500 text-xs">Total Rede: {totalRede} un.</p>
+                             )}
+                          </div>
                         ) : (
                           <div className="space-y-1">
                             <p className="text-red-500 font-bold text-sm flex items-center gap-1">
                               <AlertCircle size={16} /> Sem estoque local
                             </p>
-                            {/* Observação de outra loja */}
-                            {otherStore && (
+                            
+                            {/* Observação Inteligente */}
+                            {otherStore ? (
                               <p className="text-yellow-500 text-xs bg-yellow-500/10 px-2 py-1 rounded border border-yellow-500/20 flex items-center gap-1">
-                                <MapPin size={12} /> Disponível em: {otherStore.loja} ({otherStore.qtd} un.)
+                                <MapPin size={12} /> Tem na {otherStore.loja} ({otherStore.qtd} un.)
                               </p>
+                            ) : totalRede > 0 ? (
+                              <p className="text-slate-400 text-xs flex items-center gap-1">
+                                <Info size={12} /> {totalRede} un. em outras filiais
+                              </p>
+                            ) : (
+                              <p className="text-slate-600 text-xs">Indisponível em toda rede</p>
                             )}
                           </div>
                         )}
                       </div>
 
-                      {/* Botão Adicionar */}
                       <button 
                         onClick={() => handleAddToCart(part, localStock)}
                         disabled={localStock === 0}
