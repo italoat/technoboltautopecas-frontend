@@ -19,6 +19,7 @@ const modules = [
   { name: 'Comando (Dash)', path: '/', icon: LayoutDashboard },
   { name: 'PDV & Orçamento', path: '/pos', icon: ShoppingCart, highlight: true },
   { name: 'Busca Peças (Cross)', path: '/search', icon: ArrowRightLeft },
+  // Vision: Configuraremos para aparecer só no mobile via CSS
   { name: 'TechnoBolt Vision', path: '/vision', icon: ScanEye, new: true },
   { name: 'Revisor Fiscal', path: '/fiscal', icon: FileText },
   { name: 'Auditor Estoque', path: '/inventory', icon: Box },
@@ -32,7 +33,7 @@ export const Sidebar = () => {
   const navigate = useNavigate();
   
   // Recupera dados do usuário e da loja selecionada com tratamento de erro
-  const userStr = localStorage.getItem('user');
+  const userStr = localStorage.getItem('technobolt_user') || localStorage.getItem('user');
   let user = null;
   try {
     user = userStr ? JSON.parse(userStr) : null;
@@ -43,6 +44,7 @@ export const Sidebar = () => {
   const currentStore = user?.currentStore || { name: 'Loja Não Selecionada', id: '---' };
 
   const handleLogout = () => {
+    localStorage.removeItem('technobolt_user');
     localStorage.removeItem('user');
     navigate('/login');
   };
@@ -82,42 +84,50 @@ export const Sidebar = () => {
 
       {/* --- NAVEGAÇÃO --- */}
       <nav className="flex-1 p-4 space-y-1.5">
-        {modules.map((mod) => (
-          <NavLink
-            key={mod.path}
-            to={mod.path}
-            className={({ isActive }) => `
-              flex items-center gap-3 px-3 py-3 rounded-lg transition-all text-sm font-medium group relative
-              ${isActive 
-                ? 'bg-bolt-500 text-white shadow-lg shadow-bolt-500/20' 
-                : 'text-slate-400 hover:bg-slate-800 hover:text-white'}
-              ${mod.highlight && !isActive ? 'border border-bolt-500/30 bg-bolt-500/5 text-bolt-500 hover:bg-bolt-500 hover:text-white' : ''}
-            `}
-          >
-            {({ isActive }) => (
-              <>
-                <mod.icon 
-                  size={18} 
-                  className={`${mod.highlight ? "text-inherit" : ""} group-hover:scale-110 transition-transform`} 
-                />
-                
-                <span>{mod.name}</span>
-                
-                {/* Badge "NOVO" */}
-                {mod.new && (
-                  <span className="ml-auto text-[9px] bg-industrial-500 text-black px-1.5 py-0.5 rounded font-bold shadow-sm shadow-industrial-500/20">
-                    NOVO
-                  </span>
-                )}
-                
-                {/* Indicador Ativo (Bolinha) */}
-                {isActive && (
-                   <div className="absolute right-2 w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
-                )}
-              </>
-            )}
-          </NavLink>
-        ))}
+        {modules.map((mod) => {
+          // Lógica de Visibilidade:
+          // Se for Vision (/vision) -> flex no Mobile, hidden no Desktop
+          // Se for Outros -> hidden no Mobile, flex no Desktop
+          const isVision = mod.path === '/vision';
+          const visibilityClass = isVision ? 'flex md:hidden' : 'hidden md:flex';
+
+          return (
+            <NavLink
+              key={mod.path}
+              to={mod.path}
+              className={({ isActive }) => `
+                ${visibilityClass} items-center gap-3 px-3 py-3 rounded-lg transition-all text-sm font-medium group relative
+                ${isActive 
+                  ? 'bg-bolt-500 text-white shadow-lg shadow-bolt-500/20' 
+                  : 'text-slate-400 hover:bg-slate-800 hover:text-white'}
+                ${mod.highlight && !isActive ? 'border border-bolt-500/30 bg-bolt-500/5 text-bolt-500 hover:bg-bolt-500 hover:text-white' : ''}
+              `}
+            >
+              {({ isActive }) => (
+                <>
+                  <mod.icon 
+                    size={18} 
+                    className={`${mod.highlight ? "text-inherit" : ""} group-hover:scale-110 transition-transform`} 
+                  />
+                  
+                  <span>{mod.name}</span>
+                  
+                  {/* Badge "NOVO" */}
+                  {mod.new && (
+                    <span className="ml-auto text-[9px] bg-industrial-500 text-black px-1.5 py-0.5 rounded font-bold shadow-sm shadow-industrial-500/20">
+                      NOVO
+                    </span>
+                  )}
+                  
+                  {/* Indicador Ativo (Bolinha) */}
+                  {isActive && (
+                    <div className="absolute right-2 w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
+                  )}
+                </>
+              )}
+            </NavLink>
+          );
+        })}
       </nav>
 
       {/* --- FOOTER COM USUÁRIO E LOGOUT --- */}
