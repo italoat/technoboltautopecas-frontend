@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { MessageCircle, Send, UserCircle, RefreshCcw } from 'lucide-react';
+import { MessageCircle, Send, RefreshCcw } from 'lucide-react';
 import api from '../services/api';
 
 export const TeamChat = () => {
@@ -19,7 +19,7 @@ export const TeamChat = () => {
 
   useEffect(() => {
     loadMessages();
-    const interval = setInterval(loadMessages, 3000); // Polling a cada 3s
+    const interval = setInterval(loadMessages, 3000); 
     return () => clearInterval(interval);
   }, []);
 
