@@ -1,13 +1,13 @@
 import { Outlet } from 'react-router-dom';
-import { Sidebar } from '../components/Sidebar'; // <--- Agora o caminho baterá com src/components/Sidebar.tsx
+import { Sidebar } from './Sidebar'; // <--- CORREÇÃO: Importando da mesma pasta 'layouts'
 import { Bell, Search } from 'lucide-react';
 
 export const MainLayout = () => {
-  // Lógica do Usuário Dinâmico
+  // --- LÓGICA DO USUÁRIO DINÂMICO ---
   const userStr = localStorage.getItem('technobolt_user') || localStorage.getItem('user');
-  const user = userStr ? JSON.parse(userStr) : { name: 'Usuário Convidado', role: 'Visitante' };
+  const user = userStr ? JSON.parse(userStr) : { name: 'Visitante', role: 'Convidado' };
 
-  // Gera iniciais
+  // Gera iniciais (Ex: Italo Trovão -> IT)
   const getInitials = (name: string) => {
     if (!name) return 'TB';
     return name
@@ -23,10 +23,16 @@ export const MainLayout = () => {
 
   return (
     <div className="min-h-screen bg-dark-bg text-slate-100 flex font-sans">
+      {/* Sidebar Fixa */}
       <Sidebar />
 
+      {/* Conteúdo Principal */}
       <div className="flex-1 ml-64 flex flex-col min-w-0 transition-all duration-300">
+        
+        {/* Top Header */}
         <header className="h-16 bg-dark-bg/95 backdrop-blur-md border-b border-slate-700 sticky top-0 z-40 px-8 flex items-center justify-between shadow-sm">
+          
+          {/* Barra de Busca Global */}
           <div className="flex items-center gap-4 w-96">
             <div className="relative w-full group">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-bolt-500 transition-colors" size={16} />
@@ -38,6 +44,7 @@ export const MainLayout = () => {
             </div>
           </div>
 
+          {/* Área do Usuário */}
           <div className="flex items-center gap-4">
             <button className="relative p-2 text-slate-400 hover:text-white transition-colors hover:bg-slate-800 rounded-full">
               <Bell size={20} />
@@ -63,6 +70,7 @@ export const MainLayout = () => {
           </div>
         </header>
 
+        {/* Área de Conteúdo das Páginas */}
         <main className="p-8 flex-1 overflow-y-auto custom-scrollbar">
           <Outlet />
         </main>
