@@ -11,14 +11,16 @@ import {
   ShoppingCart, 
   Store,
   LogOut,
-  UserCircle
+  UserCircle,
+  Wallet // Ícone para Frente de Caixa
 } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
 
 const modules = [
   { name: 'Comando (Dash)', path: '/', icon: LayoutDashboard },
   { name: 'PDV & Orçamento', path: '/pos', icon: ShoppingCart, highlight: true },
-  { name: 'Hub Transferência', path: '/logistics', icon: Truck }, // Novo Módulo Adicionado
+  { name: 'Frente de Caixa', path: '/cashier', icon: Wallet, highlight: true }, // Novo Módulo
+  { name: 'Hub Transferência', path: '/logistics', icon: Truck }, // Novo Módulo
   { name: 'Busca Peças (Cross)', path: '/search', icon: ArrowRightLeft },
   { name: 'TechnoBolt Vision', path: '/vision', icon: ScanEye, new: true },
   { name: 'Revisor Fiscal', path: '/fiscal', icon: FileText },
@@ -43,8 +45,10 @@ export const Sidebar = () => {
   const currentStore = user?.currentStore || { name: 'Loja Não Selecionada', id: '---' };
 
   const handleLogout = () => {
+    // Limpa todas as chaves de sessão e carrinho
     localStorage.removeItem('technobolt_user');
     localStorage.removeItem('user');
+    localStorage.removeItem('technobolt_cart');
     navigate('/login');
   };
 
@@ -84,10 +88,10 @@ export const Sidebar = () => {
       {/* --- NAVEGAÇÃO --- */}
       <nav className="flex-1 p-4 space-y-1.5">
         {modules.map((mod) => {
-          // Lógica de Visibilidade Mobile vs Desktop
-          const isVision = mod.path === '/vision';
+          // Lógica de Visibilidade:
           // Vision: Visível no mobile (flex), oculto no desktop (md:hidden)
           // Outros: Oculto no mobile (hidden), visível no desktop (md:flex)
+          const isVision = mod.path === '/vision';
           const visibilityClass = isVision ? 'flex md:hidden' : 'hidden md:flex';
 
           return (
