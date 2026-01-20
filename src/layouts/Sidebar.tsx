@@ -1,4 +1,3 @@
-import React from 'react';
 import { 
   LayoutDashboard, 
   FileText, 
@@ -32,7 +31,7 @@ const modules = [
 export const Sidebar = () => {
   const navigate = useNavigate();
   
-  // Recupera dados do usuário e da loja selecionada com tratamento de erro seguro
+  // Recupera dados do usuário e da loja selecionada com tratamento de erro
   const userStr = localStorage.getItem('user');
   let user = null;
   try {
@@ -95,7 +94,6 @@ export const Sidebar = () => {
               ${mod.highlight && !isActive ? 'border border-bolt-500/30 bg-bolt-500/5 text-bolt-500 hover:bg-bolt-500 hover:text-white' : ''}
             `}
           >
-            {/* AQUI ESTAVA O ERRO: Agora usamos a função para envolver o conteúdo */}
             {({ isActive }) => (
               <>
                 <mod.icon 
@@ -112,7 +110,7 @@ export const Sidebar = () => {
                   </span>
                 )}
                 
-                {/* Indicador Ativo (Bolinha) - Agora funciona pois está dentro do escopo da função */}
+                {/* Indicador Ativo (Bolinha) */}
                 {isActive && (
                    <div className="absolute right-2 w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
                 )}
