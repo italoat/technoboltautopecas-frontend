@@ -3,11 +3,13 @@ import { MainLayout } from './layouts/MainLayout';
 import { Dashboard } from './pages/Dashboard';
 import { PartsSearch } from './pages/PartsSearch';
 import { Login } from './pages/Login';
-import { Vision } from './pages/Vision'; // <--- Importação nova
+import { Vision } from './pages/Vision';
+import { POS } from './pages/POS'; // <--- Importação do Módulo PDV
 
 // Componente que protege a rota
 const PrivateRoute = ({ children }: { children: JSX.Element }) => {
-  const user = localStorage.getItem('user'); // Ou 'technobolt_user' se atualizou o login anteriormente
+  // Verifica ambas as chaves para garantir compatibilidade
+  const user = localStorage.getItem('technobolt_user') || localStorage.getItem('user');
   return user ? children : <Navigate to="/login" />;
 };
 
@@ -19,6 +21,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         
         {/* Rota Protegida - Modo Imersivo (Sem Layout Padrão) */}
+        {/* O Vision fica aqui para ocupar a tela toda do celular sem a Sidebar */}
         <Route path="/vision" element={
           <PrivateRoute>
             <Vision />
@@ -33,8 +36,9 @@ function App() {
         }>
           <Route index element={<Dashboard />} />
           <Route path="search" element={<PartsSearch />} />
+          <Route path="pos" element={<POS />} /> {/* <--- Rota do PDV Adicionada */}
           
-          {/* Rotas Placeholder */}
+          {/* Rotas Placeholder para links que ainda não existem */}
           <Route path="*" element={<div className="p-10 text-slate-500">Módulo em desenvolvimento...</div>} />
         </Route>
       </Routes>
