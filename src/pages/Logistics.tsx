@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Truck, ArrowRightLeft, MapPin, Package, Search, CheckCircle, AlertTriangle, ArrowRight } from 'lucide-react';
+import { Truck, ArrowRightLeft, MapPin, Package, Search, CheckCircle, ArrowRight } from 'lucide-react';
 import api from '../services/api';
 
 interface StockLocation {
@@ -17,24 +17,20 @@ interface Part {
 }
 
 export const Logistics = () => {
-  // Estados
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPart, setSelectedPart] = useState<Part | null>(null);
   const [searchResults, setSearchResults] = useState<Part[]>([]);
   
-  // Formulário de Transferência
   const [originStore, setOriginStore] = useState<number | null>(null);
   const [destStore, setDestStore] = useState<number | null>(null);
   const [qty, setQty] = useState<number>(1);
   const [isProcessing, setIsProcessing] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
 
-  // Dados do Usuário (Para pré-selecionar destino como loja atual)
   const userStr = localStorage.getItem('technobolt_user') || localStorage.getItem('user');
   const user = userStr ? JSON.parse(userStr) : null;
   const currentStoreId = user?.currentStore?.id ? Number(user.currentStore.id) : null;
 
-  // Efeito de Busca
   useEffect(() => {
     const delayDebounceFn = setTimeout(async () => {
       if (searchTerm.length > 2) {
@@ -49,17 +45,15 @@ export const Logistics = () => {
     return () => clearTimeout(delayDebounceFn);
   }, [searchTerm]);
 
-  // Ao selecionar uma peça
   const handleSelectPart = (part: Part) => {
     setSelectedPart(part);
-    setSearchTerm(''); // Limpa busca visual
+    setSearchTerm('');
     setSearchResults([]);
-    setDestStore(currentStoreId); // Sugere loja atual como destino
+    setDestStore(currentStoreId);
     setOriginStore(null);
     setQty(1);
   };
 
-  // Executar Transferência
   const handleTransfer = async () => {
     if (!selectedPart || !originStore || !destStore) return;
     
@@ -75,7 +69,6 @@ export const Logistics = () => {
 
       setSuccessMsg(`Transferência de ${qty} itens realizada com sucesso!`);
       
-      // Reseta após sucesso
       setTimeout(() => {
         setSuccessMsg('');
         setSelectedPart(null);
@@ -88,12 +81,6 @@ export const Logistics = () => {
     }
   };
 
-  // Encontrar nome da loja pelo ID
-  const getStoreName = (id: number) => {
-    return selectedPart?.stock_locations.find(l => Number(l.loja_id) === id)?.nome || `Loja ${id}`;
-  };
-
-  // Máximo permitido na origem selecionada
   const maxQty = originStore && selectedPart 
     ? selectedPart.stock_locations.find(l => Number(l.loja_id) === originStore)?.qtd || 0
     : 0;
@@ -101,7 +88,6 @@ export const Logistics = () => {
   return (
     <div className="p-8 animate-in fade-in duration-500">
       
-      {/* Cabeçalho */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-white flex items-center gap-3">
           <Truck className="text-industrial-500" size={32} />
@@ -119,7 +105,6 @@ export const Logistics = () => {
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           
-          {/* COLUNA 1: Seleção de Peça */}
           <div className="lg:col-span-1 space-y-4">
             <div className="bg-dark-surface p-6 rounded-2xl border border-slate-700 shadow-lg">
               <label className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-3 block">1. Selecionar Produto</label>
@@ -135,7 +120,6 @@ export const Logistics = () => {
                 />
               </div>
 
-              {/* Lista de Resultados */}
               {searchResults.length > 0 && (
                 <div className="mt-4 bg-dark-bg border border-slate-700 rounded-xl overflow-hidden max-h-60 overflow-y-auto custom-scrollbar">
                   {searchResults.map(part => (
@@ -144,7 +128,7 @@ export const Logistics = () => {
                       onClick={() => handleSelectPart(part)}
                       className="p-3 border-b border-slate-800 hover:bg-slate-800 cursor-pointer flex items-center gap-3 transition-colors"
                     >
-                      <img src={part.image} className="w-10 h-10 object-contain bg-white rounded" />
+                      <img src={part.image} className="w-10 h-10 object-contain bg-white rounded" alt="" />
                       <div>
                         <p className="text-sm font-bold text-white truncate w-40">{part.name}</p>
                         <p className="text-xs text-slate-500">{part.code}</p>
@@ -155,11 +139,10 @@ export const Logistics = () => {
               )}
             </div>
 
-            {/* Preview da Peça Selecionada */}
             {selectedPart && (
               <div className="bg-industrial-500/10 border border-industrial-500/30 p-4 rounded-2xl flex items-center gap-4">
                 <div className="w-16 h-16 bg-white rounded-lg p-1">
-                  <img src={selectedPart.image} className="w-full h-full object-contain" />
+                  <img src={selectedPart.image} className="w-full h-full object-contain" alt="" />
                 </div>
                 <div>
                   <p className="text-white font-bold text-sm">{selectedPart.name}</p>
@@ -169,7 +152,6 @@ export const Logistics = () => {
             )}
           </div>
 
-          {/* COLUNA 2: Configuração da Transferência */}
           <div className="lg:col-span-2">
             {selectedPart ? (
               <div className="bg-dark-surface p-8 rounded-2xl border border-slate-700 shadow-xl relative overflow-hidden">
@@ -183,7 +165,6 @@ export const Logistics = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center mb-8">
                   
-                  {/* ORIGEM */}
                   <div className="bg-dark-bg p-4 rounded-xl border border-slate-700">
                     <label className="text-xs text-slate-500 font-bold uppercase mb-2 block flex items-center gap-2"><MapPin size={12}/> Origem</label>
                     <select 
@@ -193,7 +174,7 @@ export const Logistics = () => {
                     >
                       <option value="" disabled>Selecione...</option>
                       {selectedPart.stock_locations
-                        .filter(l => Number(l.qtd) > 0) // Só mostra lojas com estoque
+                        .filter(l => Number(l.qtd) > 0)
                         .map(loc => (
                         <option key={loc.loja_id} value={loc.loja_id}>
                           {loc.nome} ({loc.qtd} un.)
@@ -202,14 +183,12 @@ export const Logistics = () => {
                     </select>
                   </div>
 
-                  {/* SETA */}
                   <div className="flex justify-center">
                     <div className="bg-slate-700 p-2 rounded-full">
                        <ArrowRight className="text-slate-400" />
                     </div>
                   </div>
 
-                  {/* DESTINO */}
                   <div className="bg-dark-bg p-4 rounded-xl border border-slate-700">
                     <label className="text-xs text-slate-500 font-bold uppercase mb-2 block flex items-center gap-2"><MapPin size={12}/> Destino</label>
                     <select 
@@ -218,8 +197,6 @@ export const Logistics = () => {
                       onChange={e => setDestStore(Number(e.target.value))}
                     >
                       <option value="" disabled>Selecione...</option>
-                      {/* Lista todas as lojas possíveis (mockado ou extraído da peça) */}
-                      {/* Para simplificar, usamos as mesmas da peça, mas idealmente seria uma lista global de lojas */}
                       {selectedPart.stock_locations.map(loc => (
                         <option key={loc.loja_id} value={loc.loja_id} disabled={Number(loc.loja_id) === originStore}>
                           {loc.nome}
@@ -229,7 +206,6 @@ export const Logistics = () => {
                   </div>
                 </div>
 
-                {/* Quantidade */}
                 <div className="bg-dark-bg p-6 rounded-xl border border-slate-700 mb-8 flex items-center justify-between">
                    <div>
                      <label className="text-xs text-slate-500 font-bold uppercase block">Quantidade a transferir</label>
@@ -251,7 +227,6 @@ export const Logistics = () => {
                    </div>
                 </div>
 
-                {/* Botão Ação */}
                 <button 
                   onClick={handleTransfer}
                   disabled={!originStore || !destStore || qty > maxQty || isProcessing}
