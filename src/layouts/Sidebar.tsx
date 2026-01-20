@@ -14,7 +14,7 @@ import {
   UserCircle,
   Wallet, 
   MessageCircle,
-  PackagePlus // Para cadastro de produtos, se precisar
+  PackagePlus // Agora está sendo usado abaixo
 } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
 
@@ -22,6 +22,7 @@ const modules = [
   { name: 'Comando (Dash)', path: '/', icon: LayoutDashboard },
   { name: 'PDV & Orçamento', path: '/pos', icon: ShoppingCart, highlight: true },
   { name: 'Frente de Caixa', path: '/cashier', icon: Wallet, highlight: true },
+  { name: 'Cadastro Produtos', path: '/products/new', icon: PackagePlus }, // <--- ADICIONADO PARA CORRIGIR O ERRO
   { name: 'Hub Transferência', path: '/logistics', icon: Truck },
   { name: 'Busca Peças (Cross)', path: '/search', icon: ArrowRightLeft },
   { name: 'TechnoBolt Vision', path: '/vision', icon: ScanEye, new: true },
@@ -29,7 +30,7 @@ const modules = [
   { name: 'Auditor Estoque', path: '/inventory', icon: Box },
   { name: 'Compras Inteligentes', path: '/purchases', icon: ShoppingBag },
   { name: 'CRM Automático', path: '/crm', icon: Mail },
-  { name: 'Chat de Time', path: '/team-chat', icon: MessageCircle }, // Novo Item na Sidebar
+  { name: 'Chat de Time', path: '/team-chat', icon: MessageCircle },
   { name: 'Consultor IA', path: '/ai-chat', icon: MessageSquare },
 ];
 
