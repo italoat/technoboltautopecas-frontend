@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ShoppingCart, CreditCard, DollarSign, Smartphone, CheckCircle, Clock, Search, User } from 'lucide-react';
+import { ShoppingCart, CreditCard, DollarSign, Smartphone, CheckCircle, Clock, User } from 'lucide-react';
 import api from '../services/api';
 
 interface SaleItem {
@@ -27,7 +27,10 @@ export const Cashier = () => {
   // Recupera Loja (Tratamento de ID)
   const getStoreId = (id: any) => {
     if (typeof id === 'number') return id;
-    if (typeof id === 'string') { const match = id.match(/\d+/); return match ? parseInt(match[0], 10) : 1; }
+    if (typeof id === 'string') { 
+        const match = id.match(/\d+/); 
+        return match ? parseInt(match[0], 10) : 1; 
+    }
     return 1;
   };
   const userStr = localStorage.getItem('technobolt_user') || localStorage.getItem('user');
