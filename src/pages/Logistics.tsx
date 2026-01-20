@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Truck, ArrowRightLeft, MapPin, Package, Search, CheckCircle, ArrowRight, Clock, XCircle, Box, User, AlertCircle } from 'lucide-react';
+import { Truck, ArrowRightLeft, Package, Search, CheckCircle, ArrowRight, Clock, XCircle, Box, User } from 'lucide-react';
 import api from '../services/api';
 
 // Tipos
@@ -161,7 +161,7 @@ export const Logistics = () => {
                 <div className="mt-2 bg-dark-bg border border-slate-700 rounded-lg overflow-hidden max-h-48 overflow-y-auto custom-scrollbar">
                   {searchResults.map(part => (
                     <div key={part.id} onClick={() => { setSelectedPart(part); setSearchResults([]); setOriginStore(null); }} className="p-2 border-b border-slate-800 hover:bg-slate-800 cursor-pointer flex items-center gap-2">
-                      <img src={part.image} className="w-8 h-8 object-contain bg-white rounded" />
+                      <img src={part.image} className="w-8 h-8 object-contain bg-white rounded" alt={part.name} />
                       <div className="truncate">
                         <p className="text-xs font-bold text-white">{part.name}</p>
                         <p className="text-[10px] text-slate-500">{part.code}</p>
@@ -175,7 +175,7 @@ export const Logistics = () => {
             {/* Preview Peça Selecionada */}
             {selectedPart && (
                <div className="bg-industrial-500/10 border border-industrial-500/30 p-4 rounded-xl flex gap-3 animate-in fade-in">
-                 <img src={selectedPart.image} className="w-16 h-16 bg-white rounded object-contain" />
+                 <img src={selectedPart.image} className="w-16 h-16 bg-white rounded object-contain" alt={selectedPart.name} />
                  <div>
                    <p className="font-bold text-white text-sm line-clamp-2">{selectedPart.name}</p>
                    <p className="text-xs text-industrial-500 font-mono mt-1">{selectedPart.code}</p>
@@ -245,7 +245,7 @@ export const Logistics = () => {
            {myIncomingOrders.map(t => (
              <div key={t.id} className="bg-dark-surface p-4 rounded-xl border border-slate-700 flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <img src={t.part_image} className="w-12 h-12 bg-white rounded object-contain" />
+                  <img src={t.part_image} className="w-12 h-12 bg-white rounded object-contain" alt={t.part_name} />
                   <div>
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-white font-bold">{t.part_name}</span>
@@ -282,7 +282,7 @@ export const Logistics = () => {
            {myOutgoingTasks.map(t => (
              <div key={t.id} className="bg-dark-surface p-4 rounded-xl border border-slate-700 flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <img src={t.part_image} className="w-12 h-12 bg-white rounded object-contain" />
+                  <img src={t.part_image} className="w-12 h-12 bg-white rounded object-contain" alt={t.part_name} />
                   <div>
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-white font-bold">{t.part_name}</span>
