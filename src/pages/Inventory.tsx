@@ -13,7 +13,7 @@ interface Product {
 interface Log {
   id: string;
   product_name: string;
-  user_name: string; // Campo novo
+  user_name: string;
   old_quantity: number;
   new_quantity: number;
   reason: string;
@@ -94,14 +94,14 @@ export const Inventory = () => {
       await api.post('/api/inventory/adjust', {
         part_id: editingItem.id,
         store_id: currentStoreId,
-        user_name: user?.name || 'Auditor Anônimo', // Envia o nome do usuário
+        user_name: user?.name || 'Auditor Anônimo',
         old_quantity: oldQty,
         new_quantity: editQty,
         reason: editReason
       });
 
       alert("Estoque atualizado com sucesso!");
-      loadInventory(); // Recarrega para ver mudança
+      loadInventory(); 
       closeEditModal();
     } catch (e) {
       alert("Erro ao salvar ajuste.");
@@ -198,7 +198,8 @@ export const Inventory = () => {
                 <th className="p-4">Data/Hora</th>
                 <th className="p-4">Usuário</th>
                 <th className="p-4">Produto</th>
-                <th className="p-4 text-center">De -> Para</th>
+                {/* CORREÇÃO: "De -> Para" escapado corretamente para JSX */}
+                <th className="p-4 text-center">De {'->'} Para</th>
                 <th className="p-4">Justificativa</th>
               </tr>
             </thead>
