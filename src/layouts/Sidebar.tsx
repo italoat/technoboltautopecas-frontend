@@ -12,28 +12,30 @@ import {
   Store,
   LogOut,
   UserCircle,
-  Wallet // Ícone para Frente de Caixa
+  Wallet, // Frente de Caixa
+  MessageCircle // Chat de Time
 } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
 
 const modules = [
   { name: 'Comando (Dash)', path: '/', icon: LayoutDashboard },
   { name: 'PDV & Orçamento', path: '/pos', icon: ShoppingCart, highlight: true },
-  { name: 'Frente de Caixa', path: '/cashier', icon: Wallet, highlight: true }, // Novo Módulo
-  { name: 'Hub Transferência', path: '/logistics', icon: Truck }, // Novo Módulo
+  { name: 'Frente de Caixa', path: '/cashier', icon: Wallet, highlight: true },
+  { name: 'Hub Transferência', path: '/logistics', icon: Truck },
   { name: 'Busca Peças (Cross)', path: '/search', icon: ArrowRightLeft },
   { name: 'TechnoBolt Vision', path: '/vision', icon: ScanEye, new: true },
   { name: 'Revisor Fiscal', path: '/fiscal', icon: FileText },
   { name: 'Auditor Estoque', path: '/inventory', icon: Box },
   { name: 'Compras Inteligentes', path: '/purchases', icon: ShoppingBag },
   { name: 'CRM Automático', path: '/crm', icon: Mail },
+  { name: 'Chat de Time', path: '/team-chat', icon: MessageCircle }, // Novo Item na Sidebar
   { name: 'Consultor IA', path: '/ai-chat', icon: MessageSquare },
 ];
 
 export const Sidebar = () => {
   const navigate = useNavigate();
   
-  // Recupera dados do usuário (Compatibilidade com novo e velho login)
+  // Recupera dados do usuário
   const userStr = localStorage.getItem('technobolt_user') || localStorage.getItem('user');
   let user = null;
   try {
@@ -45,7 +47,6 @@ export const Sidebar = () => {
   const currentStore = user?.currentStore || { name: 'Loja Não Selecionada', id: '---' };
 
   const handleLogout = () => {
-    // Limpa todas as chaves de sessão e carrinho
     localStorage.removeItem('technobolt_user');
     localStorage.removeItem('user');
     localStorage.removeItem('technobolt_cart');
@@ -88,9 +89,6 @@ export const Sidebar = () => {
       {/* --- NAVEGAÇÃO --- */}
       <nav className="flex-1 p-4 space-y-1.5">
         {modules.map((mod) => {
-          // Lógica de Visibilidade:
-          // Vision: Visível no mobile (flex), oculto no desktop (md:hidden)
-          // Outros: Oculto no mobile (hidden), visível no desktop (md:flex)
           const isVision = mod.path === '/vision';
           const visibilityClass = isVision ? 'flex md:hidden' : 'hidden md:flex';
 
