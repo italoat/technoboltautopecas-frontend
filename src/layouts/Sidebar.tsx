@@ -18,12 +18,11 @@ import { NavLink, useNavigate } from 'react-router-dom';
 const modules = [
   { name: 'Comando (Dash)', path: '/', icon: LayoutDashboard },
   { name: 'PDV & Orçamento', path: '/pos', icon: ShoppingCart, highlight: true },
+  { name: 'Hub Transferência', path: '/logistics', icon: Truck }, // Novo Módulo Adicionado
   { name: 'Busca Peças (Cross)', path: '/search', icon: ArrowRightLeft },
-  // Vision: Configuraremos para aparecer só no mobile via CSS
   { name: 'TechnoBolt Vision', path: '/vision', icon: ScanEye, new: true },
   { name: 'Revisor Fiscal', path: '/fiscal', icon: FileText },
   { name: 'Auditor Estoque', path: '/inventory', icon: Box },
-  { name: 'Hub Transferência', path: '/logistics', icon: Truck },
   { name: 'Compras Inteligentes', path: '/purchases', icon: ShoppingBag },
   { name: 'CRM Automático', path: '/crm', icon: Mail },
   { name: 'Consultor IA', path: '/ai-chat', icon: MessageSquare },
@@ -32,7 +31,7 @@ const modules = [
 export const Sidebar = () => {
   const navigate = useNavigate();
   
-  // Recupera dados do usuário e da loja selecionada com tratamento de erro
+  // Recupera dados do usuário (Compatibilidade com novo e velho login)
   const userStr = localStorage.getItem('technobolt_user') || localStorage.getItem('user');
   let user = null;
   try {
@@ -52,7 +51,7 @@ export const Sidebar = () => {
   return (
     <aside className="w-64 bg-dark-surface border-r border-slate-700 flex flex-col h-screen fixed left-0 top-0 overflow-y-auto custom-scrollbar z-50 transition-all duration-300">
       
-      {/* --- HEADER COM LOGO E LOJA --- */}
+      {/* --- HEADER COM LOGO --- */}
       <div className="p-6 border-b border-slate-700">
         <h1 className="text-2xl font-bold text-white tracking-tighter flex items-center gap-2 mb-6">
           <div className="w-8 h-8 bg-bolt-500 rounded-lg flex items-center justify-center shadow-lg shadow-bolt-500/20">
@@ -85,10 +84,10 @@ export const Sidebar = () => {
       {/* --- NAVEGAÇÃO --- */}
       <nav className="flex-1 p-4 space-y-1.5">
         {modules.map((mod) => {
-          // Lógica de Visibilidade:
-          // Se for Vision (/vision) -> flex no Mobile, hidden no Desktop
-          // Se for Outros -> hidden no Mobile, flex no Desktop
+          // Lógica de Visibilidade Mobile vs Desktop
           const isVision = mod.path === '/vision';
+          // Vision: Visível no mobile (flex), oculto no desktop (md:hidden)
+          // Outros: Oculto no mobile (hidden), visível no desktop (md:flex)
           const visibilityClass = isVision ? 'flex md:hidden' : 'hidden md:flex';
 
           return (
@@ -112,14 +111,12 @@ export const Sidebar = () => {
                   
                   <span>{mod.name}</span>
                   
-                  {/* Badge "NOVO" */}
                   {mod.new && (
                     <span className="ml-auto text-[9px] bg-industrial-500 text-black px-1.5 py-0.5 rounded font-bold shadow-sm shadow-industrial-500/20">
                       NOVO
                     </span>
                   )}
                   
-                  {/* Indicador Ativo (Bolinha) */}
                   {isActive && (
                     <div className="absolute right-2 w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
                   )}
@@ -130,7 +127,7 @@ export const Sidebar = () => {
         })}
       </nav>
 
-      {/* --- FOOTER COM USUÁRIO E LOGOUT --- */}
+      {/* --- FOOTER --- */}
       <div className="p-4 border-t border-slate-700 bg-slate-800/30">
         <div className="flex items-center gap-3 mb-3 px-2">
             <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-slate-400 border border-slate-600">
