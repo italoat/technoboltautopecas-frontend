@@ -50,12 +50,25 @@ export const PartsSearch = () => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [isMiniCartOpen, setIsMiniCartOpen] = useState(false);
   
-  // CORREÇÃO AQUI: Tipagem universal para o setTimeout (funciona no Browser e Node)
+  // Ref para o timer (Tipagem compatível com navegador e build)
   const miniCartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // --- RECUPERAÇÃO DE DADOS DO USUÁRIO ---
   const userStr = localStorage.getItem('technobolt_user') || localStorage.getItem('user');
   const user = userStr ? JSON.parse(userStr) : null;
-  const currentStoreId = user?.currentStore?.id ? Number(user.currentStore.id) : 1; 
+
+  // Helper para garantir que o ID da loja seja um número válido
+  const getStoreId = (id: any) => {
+    if (!id) return 1; // Default Matriz
+    if (typeof id === 'number') return id;
+    if (typeof id === 'string') {
+        const match = id.match(/\d+/);
+        return match ? parseInt(match[0], 10) : 1;
+    }
+    return 1;
+  };
+
+  const currentStoreId = user?.currentStore?.id ? getStoreId(user.currentStore.id) : 1;
   const currentStoreName = user?.currentStore?.name || 'Matriz';
 
   // Carrega carrinho inicial
@@ -140,19 +153,27 @@ export const PartsSearch = () => {
     }, 60000);
   };
 
-  // Funções Auxiliares de Estoque
+  // --- FUNÇÕES AUXILIARES DE ESTOQUE (CORRIGIDAS) ---
   const getLocalStock = (part: Part) => {
-    const storeStock = part.stock_locations?.find(
-      loc => Number(loc.loja_id) === currentStoreId || loc.nome === currentStoreName
+    if (!part.stock_locations) return 0;
+
+    // Tenta encontrar pela correspondência exata do ID
+    const storeStock = part.stock_locations.find(
+      loc => Number(loc.loja_id) === currentStoreId
     );
+
+    // Se achou, retorna qtd. Se não, retorna 0.
     return storeStock ? Number(storeStock.qtd) : 0;
   };
 
   const getOtherStoreAvailability = (part: Part) => {
-    const otherStores = part.stock_locations?.filter(
+    if (!part.stock_locations) return null;
+    
+    // Filtra lojas que tem estoque E não são a loja atual
+    const otherStores = part.stock_locations.filter(
       loc => Number(loc.qtd) > 0 && Number(loc.loja_id) !== currentStoreId
     );
-    return otherStores && otherStores.length > 0 ? otherStores[0] : null;
+    return otherStores.length > 0 ? otherStores[0] : null;
   };
 
   // Total do Carrinho para o Popup
@@ -165,7 +186,10 @@ export const PartsSearch = () => {
       <div className="flex items-center justify-between px-2">
         <h2 className="text-2xl font-bold text-white flex items-center gap-2">
           <Package className="text-bolt-500" />
-          Consulta de Estoque
+          Consulta de Estoque 
+
+[Image of a stock inventory dashboard]
+
         </h2>
         <div className="flex items-center gap-2 text-slate-400 text-sm bg-slate-800/50 px-3 py-1.5 rounded-full border border-slate-700">
           <Store size={14} />
