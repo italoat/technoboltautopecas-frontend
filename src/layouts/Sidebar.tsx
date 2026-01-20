@@ -12,8 +12,9 @@ import {
   Store,
   LogOut,
   UserCircle,
-  Wallet, // Frente de Caixa
-  MessageCircle // Chat de Time
+  Wallet, 
+  MessageCircle,
+  PackagePlus // Para cadastro de produtos, se precisar
 } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
 
@@ -35,7 +36,7 @@ const modules = [
 export const Sidebar = () => {
   const navigate = useNavigate();
   
-  // Recupera dados do usuário
+  // Recupera dados do usuário (Compatibilidade com novo e velho login)
   const userStr = localStorage.getItem('technobolt_user') || localStorage.getItem('user');
   let user = null;
   try {
@@ -47,6 +48,7 @@ export const Sidebar = () => {
   const currentStore = user?.currentStore || { name: 'Loja Não Selecionada', id: '---' };
 
   const handleLogout = () => {
+    // Limpa todas as chaves de sessão e carrinho
     localStorage.removeItem('technobolt_user');
     localStorage.removeItem('user');
     localStorage.removeItem('technobolt_cart');
@@ -89,6 +91,9 @@ export const Sidebar = () => {
       {/* --- NAVEGAÇÃO --- */}
       <nav className="flex-1 p-4 space-y-1.5">
         {modules.map((mod) => {
+          // Lógica de Visibilidade:
+          // Vision: Visível no mobile (flex), oculto no desktop (md:hidden)
+          // Outros: Oculto no mobile (hidden), visível no desktop (md:flex)
           const isVision = mod.path === '/vision';
           const visibilityClass = isVision ? 'flex md:hidden' : 'hidden md:flex';
 
