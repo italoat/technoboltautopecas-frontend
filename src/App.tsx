@@ -13,6 +13,7 @@ import { Purchases } from './pages/Purchases';
 import { CRM } from './pages/CRM';
 import { AIChat } from './pages/AIChat';
 import { TeamChat } from './pages/TeamChat';
+import { ProductRegistration } from './pages/ProductRegistration'; // Importe Novo
 
 // Componente que protege a rota
 const PrivateRoute = ({ children }: { children: JSX.Element }) => {
@@ -47,6 +48,7 @@ function App() {
           <Route path="pos" element={<POS />} /> {/* <--- Rota do PDV Adicionada */}
           <Route path="logistics" element={<Logistics />} />
           <Route path="cashier" element={<Cashier />} />
+          <Route path="products/new" element={<ProductRegistration />} /> {/* Rota Nova */}
           <Route path="fiscal" element={<Fiscal />} />
           <Route path="inventory" element={<Inventory />} />
           <Route path="purchases" element={<Purchases />} />
